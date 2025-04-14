@@ -17,24 +17,7 @@ class Main:
     time_string = ''
     BAUDRATE_COPY = 115200
 
-    @staticmethod
-    def wifi_connect(ssid, password):
-        wlan = network.WLAN(network.STA_IF)
-        wlan.active(True)
-        wlan.disconnect()
-        print('扫描周围信号源：', wlan.scan())
-        print("正在连接 WiFi 中", end="")
-        wlan.connect(ssid, password)
-        while not wlan.isconnected():
-            print(".", end="")
-            time.sleep(0.5)
-        print("")  # 添加换行，使得后续输出更清晰
-
-        ifconfig_info = wlan.ifconfig()
-        print(f"IP: {ifconfig_info[0]}")
-        print(f"Netmask: {ifconfig_info[1]}")
-        print(f"Gateway: {ifconfig_info[2]}")
-        print(f"DNS: {ifconfig_info[3]}")
+   
 
     @staticmethod
     def set_time():
@@ -46,32 +29,10 @@ class Main:
             current_time[0], current_time[1], current_time[2],
             current_time[3], current_time[4], current_time[5])
 
-    @staticmethod
-    def emqx_connect(MQTT_BROKER, MQTT_PORT, KEEPALIVE_TIME, MQTT_USER, MQTT_PASSWORD,
-                     CLIENT_ID, MQTT_TOPIC, REPLY_TOPIC,
-                     ID, BAUDRATE, TX, RX, BIT,
-                     PARITY, STOP):
-        global BAUDRATE_COPY
-        BAUDRATE_COPY = BAUDRATE
-        last_heartbeat = 0
-        client = None
+    
+       
 
-        def reconnect():
-            nonlocal client
-            while client is None:
-                try:
-                    client = MQTTClient(client_id=CLIENT_ID, server=MQTT_BROKER, port=MQTT_PORT, user=MQTT_USER,
-                                        password=MQTT_PASSWORD, keepalive=KEEPALIVE_TIME)
-                    client.connect()
-                    print("Connected to MQTT broker")
-                except OSError as ex:
-                    print(f"Connection failed with error {ex}. Retrying...")
-                    time.sleep(5)  # Wait before retrying
-
-        reconnect()
-        client.set_callback(Main.mqtt_subscribe_callback)
-        client.subscribe(MQTT_TOPIC)
-
+       
         global uart
         uart = UART(ID, baudrate=BAUDRATE, tx=Pin(TX), rx=Pin(RX), bits=BIT, parity=PARITY, stop=STOP)
 
@@ -281,38 +242,4 @@ class FactoryUtil:
         
 
 
-
-# 使用案例
-# from esp32api.Main import Main
-# import random
-#
-# MQTT_BROKER = '47.102.120.144'
-# MQTT_PORT = 1883
-# CLIENT_ID = 'esp32-client-{id}'.format(id=random.getrandbits(8))
-# MQTT_TOPIC = b'emqx/esp32/send'
-# REPLY_TOPIC = b'emqx/stc8h/receive'
-# MQTT_USER = 'admin'
-# MQTT_PASSWORD = 'Semea-0407'
-#
-# KEEPALIVE_TIME = 30  # 设置keepalive时间为30秒
-#
-# # WIFI连接
-# SSID = 'SemeaTech'
-# PASSWORD = 'Smt-0407'
-#
-# # UART configuration
-# ID = 2
-# BAUDRATE = 115200
-# TX = 17
-# RX = 16
-# BIT = 8
-# PARITY = None
-# STOP = 1
-#
-# Main.wifi_connect(SSID, PASSWORD)
-# Main.set_time()
-# Main.emqx_connect(MQTT_BROKER, MQTT_PORT, KEEPALIVE_TIME, MQTT_USER, MQTT_PASSWORD,
-#                   CLIENT_ID, MQTT_TOPIC, REPLY_TOPIC,
-#                   ID, BAUDRATE, TX, RX, BIT, PARITY,
-#                   STOP)
 
