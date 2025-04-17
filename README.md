@@ -57,10 +57,10 @@ git clone https://github.com/semeateh/Semeatech-Technology-Sensors.git
 
 ```
 main.py
-flag_code.py
-return_data_substring.py
-data_change_util.py
-factory_util.py
+UAREIUtil.py
+SensorDateUtil.py
+SensorRespomseParser.py
+FactoryUtil.py
 test.py
 ```
 
@@ -98,10 +98,10 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 
 #### ✅ 1. 复制以下模块文件：
 
-- `flag_code.py`
-- `return_data_substring.py`
+- `SensorDateUtil.py`
+- `SensorRespomseParser.py`
 - `data_change_util.py`
-- `factory_util.py`
+- `FactoryUtil.py`
 - `test.py`
 
 #### ✅ 2. 在你的主程序中调用：
@@ -135,7 +135,7 @@ print(data)
 - 数据解析与打印
 - 心跳机制
 
-### 2. `ReturnDataSubstring` 类
+### 2. `SensorDateUtil` 类
 - 解析传感器返回的 hex 数据
 - 映射气体类型
 - 返回浓度值、单位、状态等信息
@@ -147,7 +147,7 @@ print(data)
 - `F_SENSOR_MODULE_ZERO3`: 发送校零指令
 - `F_SENSOR_MODULE_CALIBRATION4`: 发送标定指令
 
-### 4. `DataChangeUtil` 类
+### 4. `SensorRespomseParser` 类
 数据处理工具类：
 - Hex 字符串与 bytearray 转换
 - 字符串清洗
@@ -189,8 +189,4 @@ print(data)
 本项目使用 MIT 许可证，详情请见 [LICENSE](./LICENSE)。
 
 ---
-
-如果你希望我直接生成一个包含全部结构的项目压缩包（含默认配置、注释丰富的 `main.py`），我也可以帮你打包输出，或者根据你手上的开发板型号直接帮你适配 👍
-
-需要进一步定制或者加入网页配置、图形界面展示等功能，随时喊我！
 
