@@ -1,146 +1,196 @@
-# 项目使用说明
+# 项目使用说明（MicroPython UART 传感器集成）
 
-## 项目简介
+## 📌 项目简介
 
-本项目包括一个 `Main` 类和多个传感器数据处理模块，主要功能包括：
-- 读取传感器数据，进行解析和处理
-- 处理设备的校零和标定
-- 与支持 UART 通信的传感器进行数据交互
+本项目用于在 **MicroPython 支持的开发板** 上读取 UART 接口传感器的数据，并实现：
 
-本项目主要适用于环境监测、气体检测等应用场景。
+- 数据读取与解析（支持多种气体检测传感器）
+- 校零与标定指令发送
+- MQTT（可选）连接物联网平台（如阿里云、OneNet、EMQX）
 
-## 功能概述
-
-### 1. `Main` 类主要实现的功能：
-- **UART 数据处理**: 通过串口（UART）接收和发送数据，解析不同类型的传感器数据
-- **传感器数据解析**: 结合 `ReturnDataSubstring` 类，将传感器数据解析成易于理解的格式
-- **校零与标定**: 支持传感器的校零和标定操作
-
-### 2. `ReturnDataSubstring` 类
-- **气体类型映射**: 支持从 `GAS_TYPE_MAPPING_4` 和 `GAS_TYPE_MAPPING_7` 中获取对应的气体名称
-- **数据提取与处理**: 通过 `substring_data_4` 和 `substring_data_7` 方法解析传感器返回的数据
-- **校零与标定信息**: 处理模块的校零、标定状态
-
-### 3. `FlagCode` 类
-- **定义与传感器通信的指令码**，用于不同型号的传感器，包括读取数据、校零、标定等指令。
-
-### 4. `DataChangeUtil` 类
-- **数据转换工具**，支持十六进制字符串和字节数组的转换，十六进制到十进制转换等。
-
-### 5. `FactoryUtil` 类
-- **根据传感器类型 ID 选择合适的指令进行通信**，支持不同波特率的传感器。
-
-## 安装要求
-
-- **Python 3.x**
-- **MicroPython 库**（适用于嵌入式设备）
-- **支持 UART 通信的传感器**
-- 依赖：`ReturnDataSubstring`, `DataChangeUtil`, `FlagCode` 类
-
-## 使用方法
-
-### 1. 解析传感器数据
-```python
-response = uart.read()  # 从传感器读取数据
-hex_string = ' '.join(f'{byte:02x}' for byte in response)  # 转换为十六进制字符串
-rm_space = DataChangeUtil.clean_string(hex_string)  # 清除空格
-
-# 根据数据开头判断解析方式
-if hex_string[:2] == 'AA':
-    data = ReturnDataSubstring.substring_data_4(rm_space, sensor_flag)
-elif hex_string[:2] == '3A':
-    data = ReturnDataSubstring.substring_data_7(rm_space, sensor_flag)
-
-print(f"Parsed Data: {data}")
-```
-
-### 2. 发送数据
-```python
-# 将处理后的数据发送到设备或其他系统
-sensor_data = {"data": data}
-json_data = json.dumps(sensor_data).encode('utf-8')
-# 使用适当的通信方式发送数据
-```
-
-### 3. 处理 UART 发送与接收
-```python
-# 根据指令码向传感器发送命令
-sensor_flag = FlagCode.F_SENSOR_TYPE1  # 获取传感器类型
-code = FactoryUtil.by_type_get_return(sensor_flag, BAUDRATE)
-uart.write(code)  # 向传感器发送命令
-
-# 读取传感器返回的数据
-response = uart.read()
-```
-
-### 4. 处理错误
-```python
-try:
-    # 数据处理代码...
-except Exception as e:
-    print(f"Error: {e}")
-    # 处理错误或重试机制
-```
-
-## 主要类说明
-
-### `FlagCode` 类
-```python
-sensor_info_cmd = FlagCode.F_SENSOR_TYPE1  # 获取传感器信息
-```
-- `F_SENSOR_TYPE1`: 读取传感器类型
-- `F_SENSOR_NUM2`: 读取浓度数据
-- `F_SENSOR_MODULE_ZERO3`: 校零
-- `F_SENSOR_MODULE_CALIBRATION4`: 标定
-
-### `ReturnDataSubstring` 类
-```python
-gas_type = ReturnDataSubstring.switch_type_4(2)  # 获取气体类型
-print(gas_type)  # 输出: "监测气体:CO"
-```
-
-### `DataChangeUtil` 类
-```python
-hex_str = "AA 0F 01 C5 80 EE"
-byte_array = DataChangeUtil.hex_string_to_byte_array(hex_str)
-print(byte_array)  # 输出: bytearray([170, 15, 1, 197, 128, 238])
-```
-
-### `FactoryUtil` 类
-```python
-type_id = 1
-baud_rate = 115200
-command = FactoryUtil.by_type_get_return(type_id, baud_rate)
-print(command)  # 输出对应的字节数组
-```
-
-## 常见问题
-
-1. **如何选择正确的 `type_id`？**
-   - `1`：获取气体类型
-   - `2`：获取浓度数据
-   - `3-4`：查询校零和标定状态
-
-2. **如何确保传感器数据正确解析？**
-   - 确保从传感器读取的数据格式正确，`AA` 开头使用 `substring_data_4`，`3A` 开头使用 `substring_data_7`。
-
-3. **如何处理 UART 通信问题？**
-   - 确保 UART 配置正确（波特率、数据位、校验位等）。
-   - 传感器和设备连接是否正常。
-
-4. **如何处理传感器错误或异常？**
-   - 根据错误信息调整通信协议或检查设备状态。
-
-## 许可证
-
-本项目使用 MIT 许可证，详情请见 `LICENSE` 文件。
+适用于 **环境监测、气体检测、工业监控等嵌入式 IoT 场景**。
 
 ---
 
-这样改写后，主要集中在传感器数据处理、指令码解析和校零标定等功能。如果有其他需要调整的地方，随时告诉我！
+## 🚀 快速开始（适用于零基础用户）
 
-## 许可证
+### ✅ 你需要准备
 
-本项目使用 MIT 许可证，详情请见 `LICENSE` 文件。
+| 项目 | 推荐/说明 |
+|------|-----------|
+| 开发板 | ESP32 / ESP8266（支持 MicroPython） |
+| 传感器 | UART 通信的气体传感器（如电化学、红外 CO₂ 传感器） |
+| 工具 | USB 数据线、电脑 |
+| 软件 | MicroPython 固件、[Thonny 编辑器](https://thonny.org/)（或 uPyCraft） |
 
+---
+
+### 🛠️ 1. 安装 MicroPython 到开发板
+
+1. 下载 MicroPython 固件（选择你的芯片类型）：  
+   https://micropython.org/download/
+
+2. 安装刷写工具（推荐使用 [Thonny](https://thonny.org/) 或 [esptool](https://github.com/espressif/esptool)）
+
+3. 使用 Thonny：
+   - 插上开发板，打开 Thonny
+   - 工具栏选择「MicroPython (ESP32)」
+   - 安装或升级固件：工具 > 安装 MicroPython 到设备 > 选择端口、上传固件
+
+---
+
+### ✍️ 2. 运行项目代码
+
+#### ✅ 下载项目代码
+
+你可以通过 Git 克隆项目或直接下载 `.zip` 文件解压。
+
+```bash
+git clone https://github.com/semeateh/Semeatech-Technology-Sensors.git
+```
+
+#### ✅ 连接开发板
+
+- 打开 Thonny
+- 选择 MicroPython 设备（通常是 COMx 或 /dev/ttyUSBx）
+- 将以下文件上传到开发板：
+
+```
+main.py
+flag_code.py
+return_data_substring.py
+data_change_util.py
+factory_util.py
+test.py
+```
+
+> **提示**：在 Thonny 左侧「文件」区右键 -> 上传文件。
+
+#### ✅ 开始运行
+
+将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
+
+你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
+
+```
+[UART] 收到数据: AA01020304...
+Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
+```
+
+---
+
+### 🔌 3. 如何连接传感器（示例接线）
+
+| 传感器引脚 | ESP32 GPIO |
+|------------|-------------|
+| VCC        | 3.3V        |
+| GND        | GND         |
+| TX         | GPIO16 (RX) |
+| RX         | GPIO17 (TX) |
+
+请根据你的开发板引脚图和传感器说明书调整。
+
+---
+
+### 📦 4. 如何将本项目集成到你的项目中？
+
+如果你有自己的项目结构，可以这样整合：
+
+#### ✅ 1. 复制以下模块文件：
+
+- `flag_code.py`
+- `return_data_substring.py`
+- `data_change_util.py`
+- `factory_util.py`
+- `test.py`
+
+#### ✅ 2. 在你的主程序中调用：
+
+```python
+from return_data_substring import ReturnDataSubstring
+from flag_code import FlagCode
+from data_change_util import DataChangeUtil
+from factory_util import FactoryUtil
+
+# 初始化 UART 并读取数据
+from machine import UART, Pin
+uart = UART(1, baudrate=9600, tx=Pin(17), rx=Pin(16))
+
+uart.write(FactoryUtil.by_type_get_return(1, 9600))
+response = uart.read()
+hex_str = ' '.join(f'{byte:02x}' for byte in response)
+clean_str = DataChangeUtil.clean_string(hex_str)
+data = ReturnDataSubstring.substring_data_4(clean_str, FlagCode.F_SENSOR_TYPE1)
+print(data)
+```
+
+---
+
+## 📘 项目结构说明
+
+### 1. `Main` 类
+核心逻辑所在，包括：
+- UART 初始化
+- 循环读取传感器数据
+- 数据解析与打印
+- 心跳机制
+
+### 2. `ReturnDataSubstring` 类
+- 解析传感器返回的 hex 数据
+- 映射气体类型
+- 返回浓度值、单位、状态等信息
+
+### 3. `FlagCode` 类
+预定义了传感器指令，如：
+- `F_SENSOR_TYPE1`: 获取气体类型
+- `F_SENSOR_NUM2`: 获取气体浓度
+- `F_SENSOR_MODULE_ZERO3`: 发送校零指令
+- `F_SENSOR_MODULE_CALIBRATION4`: 发送标定指令
+
+### 4. `DataChangeUtil` 类
+数据处理工具类：
+- Hex 字符串与 bytearray 转换
+- 字符串清洗
+- 十进制/十六进制转换
+
+### 5. `FactoryUtil` 类
+根据传感器类型生成指令，兼容不同波特率/型号。
+
+---
+
+## 📖 常见问题解答
+
+### 1. **如何知道我的传感器型号？**
+请查阅传感器手册，确认是否为 UART 通信，并获取通信协议文档。
+
+### 2. **为什么接了传感器没反应？**
+- 检查接线是否正确（TX <-> RX）
+- 检查波特率是否匹配（默认 9600 或 115200）
+- 使用 `uart.any()` 检查是否有数据返回
+
+### 3. **UART 数据不完整怎么办？**
+建议在 `uart.read()` 前加入 `utime.sleep(0.1)` 短暂等待，确保数据完整接收。
+
+### 4. **如何将数据发送到服务器？**
+你可以在读取数据后使用 MQTT、HTTP 等方式上传，代码中已集成 MQTT 示例。
+
+---
+
+## 🧩 后续扩展建议
+
+- 增加 Web 配置页面（如配置 WiFi 和 MQTT）
+- 支持多传感器并发读取
+- 将数据储存到本地（如 SD 卡）
+
+---
+
+## 📄 许可证
+
+本项目使用 MIT 许可证，详情请见 [LICENSE](./LICENSE)。
+
+---
+
+如果你希望我直接生成一个包含全部结构的项目压缩包（含默认配置、注释丰富的 `main.py`），我也可以帮你打包输出，或者根据你手上的开发板型号直接帮你适配 👍
+
+需要进一步定制或者加入网页配置、图形界面展示等功能，随时喊我！
 
