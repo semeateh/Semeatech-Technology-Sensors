@@ -100,17 +100,16 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 
 - `SensorDateUtil.py`
 - `SensorRespomseParser.py`
-- `data_change_util.py`
 - `FactoryUtil.py`
-- `test.py`
+
 
 #### ✅ 2. 在你的主程序中调用：
 
 ```python
-from return_data_substring import ReturnDataSubstring
-from flag_code import FlagCode
-from data_change_util import DataChangeUtil
-from factory_util import FactoryUtil
+from esp32api.SensorResponseParser import SensorResponseParser
+from esp32api.FactoryUtil import FactoryUtil
+from esp32api.SensorDataUtil import SensorDataUtil  # 导入外部定义的SensorDataUtil类
+
 
 # 初始化 UART 并读取数据
 from machine import UART, Pin
@@ -119,8 +118,8 @@ uart = UART(1, baudrate=9600, tx=Pin(17), rx=Pin(16))
 uart.write(FactoryUtil.by_type_get_return(1, 9600))
 response = uart.read()
 hex_str = ' '.join(f'{byte:02x}' for byte in response)
-clean_str = DataChangeUtil.clean_string(hex_str)
-data = ReturnDataSubstring.substring_data_4(clean_str, FlagCode.F_SENSOR_TYPE1)
+clean_str = SensorResponseParser.clean_string(hex_str)
+data = SensorDataUtil.substring_data_4(clean_str, FlagCode.F_SENSOR_TYPE1)
 print(data)
 ```
 
