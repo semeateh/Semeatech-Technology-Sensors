@@ -16,8 +16,7 @@ class Main:
     sensor_flag = 1
     time_string = ''
     BAUDRATE_COPY = 115200
-
-   
+    BAUDRATE_LIST = [9600, 115200]  # 可尝试的波特率列表
 
     @staticmethod
     def set_time():
@@ -29,12 +28,14 @@ class Main:
             current_time[0], current_time[1], current_time[2],
             current_time[3], current_time[4], current_time[5])
 
-    
-       
+        # 调用波特率自动检测函数
+        Main.detect_baudrate()
+        if BAUDRATE_COPY is None:
+            print("无法初始化串口，程序退出。")
+            return
 
-       
         global uart
-        uart = UART(ID, baudrate=BAUDRATE, tx=Pin(TX), rx=Pin(RX), bits=BIT, parity=PARITY, stop=STOP)
+        uart = UART(ID, baudrate=BAUDRATE_COPY, tx=Pin(TX), rx=Pin(RX), bits=BIT, parity=PARITY, stop=STOP)
 
         while True:
             try:
@@ -83,6 +84,28 @@ class Main:
 
         print("发送的指令：", sensor_flag)
         print(f"{time_string} Sent to STC8H--------> {formatted_hex.upper()}")
+
+    @staticmethod
+    def detect_baudrate():
+        global uart
+        global BAUDRATE_COPY
+        for baud in Main.BAUDRATE_LIST:
+            print(f"尝试波特率：{baud}")
+            uart = UART(ID, baudrate=baud, tx=Pin(TX), rx=Pin(RX), bits=BIT, parity=PARITY, stop=STOP)
+            uart.flush()
+            uart.write(b'\xAA\x01\x01\xC1\xE0\xEE')  # 或者任意已知指令以获得响应
+            time.sleep(0.5)
+            if uart.any():
+                response = uart.read()
+                if response:
+                    hex_string = ' '.join(f'{byte:02x}' for byte in response).upper()
+                    cleaned = DataChangeUtil.clean_string(hex_string)
+                    if cleaned.startswith("AA") or cleaned.startswith("3A"):
+                        print(f"有效响应：{hex_string}")
+                        BAUDRATE_COPY = baud
+                        return baud
+        print("未能检测到有效波特率")
+        return None
 
 
 class SensorDataUtil:
