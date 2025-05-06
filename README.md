@@ -69,13 +69,12 @@ test.py
 #### ✅ 开始运行
 
 将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
+
     # 4系列
     F_SENSOR_TYPE1 = "AA 0F 01 C5 80 EE"  # 终端读取模块信息命令
-
     F_SENSOR_NUM2 = "AA 01 01 C1 E0 EE"  # 终端发送浓度数据读取命令ppm
     F_SENSOR_MODULE_ZERO3 = "AA 02 01 C1 10 EE"  # 终端发送模块校零命令
     F_SENSOR_MODULE_ZERO3_TRUE = "AA 02 01 10 D0 5C EE"
-
     F_SENSOR_MODULE_CALIBRATION4 = "AA 03 01 C0 80 EE"  # 终端发送模块标定命令
     F_SENSOR_MODULE_CALIBRATION4_TRUE = "AA 03 01 10 81 9C EE"
     F_SENSOR_UPDATE_ADDRESS5 = "AA 04 02 82 B1 EE"  # 终端修改模块地址命令
@@ -85,7 +84,6 @@ test.py
 
     # 7系列指令
     S_SENSOR_TYPE1 = "3A 10 01 00 00 01 00 00 82 B0"  # 类型
-
     S_SENSOR_NUM2 = "3A 10 03 00 00 02 00 00 73 52"  # 单位μg/m³
     S_SENSOR_NUM3 = "3A 10 03 00 02 02 00 00 72 EA"  # 单位ppb
     S_SENSOR_TEMPERATURE4 = "3A 10 03 00 04 01 00 00 82 62"  # 读取温度传感器数据 (单位为°C)
