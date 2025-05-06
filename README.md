@@ -19,7 +19,7 @@
 | 项目 | 推荐/说明 |
 |------|-----------|
 | 开发板 | ESP32 / ESP8266（支持 MicroPython） |
-| 传感器 | UART 通信的气体传感器（如电化学、红外 CO₂ 传感器） |
+| 传感器 | UART 通信的气体传感器模块Sensors |
 | 工具 | USB 数据线、电脑 |
 | 软件 | MicroPython 固件、[Thonny 编辑器](https://thonny.org/)（或 uPyCraft） |
 
@@ -69,6 +69,31 @@ test.py
 #### ✅ 开始运行
 
 将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
+    # 4系列
+    F_SENSOR_TYPE1 = "AA 0F 01 C5 80 EE"  # 终端读取模块信息命令
+
+    F_SENSOR_NUM2 = "AA 01 01 C1 E0 EE"  # 终端发送浓度数据读取命令ppm
+    F_SENSOR_MODULE_ZERO3 = "AA 02 01 C1 10 EE"  # 终端发送模块校零命令
+    F_SENSOR_MODULE_ZERO3_TRUE = "AA 02 01 10 D0 5C EE"
+
+    F_SENSOR_MODULE_CALIBRATION4 = "AA 03 01 C0 80 EE"  # 终端发送模块标定命令
+    F_SENSOR_MODULE_CALIBRATION4_TRUE = "AA 03 01 10 81 9C EE"
+    F_SENSOR_UPDATE_ADDRESS5 = "AA 04 02 82 B1 EE"  # 终端修改模块地址命令
+    F_SENSOR_UPDATE_ADDRESS5_TRUE = "AA 04 02 10 30 AD EE"
+    F_SENSOR_UPDATE_CONCENTRATION6 = "AA 05 01 01 F4 51 3F EE"  # 终端发送修改模块标气浓度命令
+    F_SENSOR_UPDATE_CONCENTRATION6_TRUE = "AA 05 01 10 01 F4 E8 2E EE"
+
+    # 7系列指令
+    S_SENSOR_TYPE1 = "3A 10 01 00 00 01 00 00 82 B0"  # 类型
+
+    S_SENSOR_NUM2 = "3A 10 03 00 00 02 00 00 73 52"  # 单位μg/m³
+    S_SENSOR_NUM3 = "3A 10 03 00 02 02 00 00 72 EA"  # 单位ppb
+    S_SENSOR_TEMPERATURE4 = "3A 10 03 00 04 01 00 00 82 62"  # 读取温度传感器数据 (单位为°C)
+    S_SENSOR_HUMIDITY5 = "3A 10 03 00 05 01 00 00 83 9E"  # 读取湿度传感器数据 (单位为%RH)
+    S_SENSOR_PARAMS6 = "3A 10 03 00 00 06 00 00 32 93"  # 读取多个参数 (地址0000 ~ 0005)
+    S_SENSOR_CHECK7 = "3A 10 08 00 0A F9"  # 校验错误应答
+    S_SENSOR_ZERO_CALIBRATION8 = "3A 10 07 00 00 01 00 00 82 D6"  # 零点标定
+    S_SENSOR_SENSITIVITY_CALIBRATION9 = "3A 10 09 00 00 01 00 0A 03 FF"  # 灵敏度标定  D为00 0A 即：使用10PPM浓度气体进行标定
 
 你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
 
@@ -81,7 +106,7 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 
 ### 🔌 3. 如何连接传感器（示例接线）
 
-| 传感器引脚 | ESP32 GPIO |
+| 传感器引脚 | ESP32 GPIO |                                                  
 |------------|-------------|
 | VCC        | 3.3V        |
 | GND        | GND         |
