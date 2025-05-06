@@ -112,7 +112,9 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 | RX         | GPIO17 (TX2) |
 
 请根据你的开发板引脚图和传感器说明书调整。
+
 例以 ESP32和7 SMART Sensor Module传感器模块图。
+
 ![screenshot-1746511969470](https://github.com/user-attachments/assets/3d6a5311-76e0-4742-bd4b-44c3a3e9c56b)            ![screenshot-1746511716478](https://github.com/user-attachments/assets/89b9d5f5-4bd8-4792-947c-ff1d2b53a3b2)
 
 
