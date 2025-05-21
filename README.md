@@ -27,15 +27,91 @@
 
 ### 🛠️ 1. 安装 MicroPython 到开发板
 
-1. 下载 MicroPython 固件（选择你的芯片类型）：  
-   https://micropython.org/download/
+### ✅ 一、准备工具和文件
 
-2. 安装刷写工具（推荐使用 [Thonny](https://thonny.org/) 或 [esptool](https://github.com/espressif/esptool)）
+| 工具/文件          | 说明                                                                |
+| -------------- | ----------------------------------------------------------------- |
+| MicroPython 固件 | 从官方 [MicroPython 官网](https://micropython.org/download/) 下载对应板子的固件 |
+| Thonny IDE     | 推荐的图形化 IDE，支持一键烧录 MicroPython                                     |
+| USB 数据线        | 用于连接开发板到电脑                                                        |
+| 驱动程序           | 如果电脑无法识别开发板，请安装驱动（如 CP210x、CH340）                                 |
 
-3. 使用 Thonny：
-   - 插上开发板，打开 Thonny
-   - 工具栏选择「MicroPython (ESP32)」
-   - 安装或升级固件：工具 > 安装 MicroPython 到设备 > 选择端口、上传固件
+---
+
+### ✅ 二、下载并安装 Thonny 编辑器（推荐）
+
+1. 访问官网下载安装：
+   👉 [https://thonny.org](https://thonny.org)
+
+2. 安装完成后，打开 Thonny。
+
+---
+
+### ✅ 三、连接开发板并安装固件
+
+#### 👉 1. 连接开发板
+
+* 用 USB 数据线将 ESP32 / ESP8266 开发板连接到电脑
+* 打开 Thonny，在状态栏底部看到类似 `MicroPython (no device selected)` 或者 `Python (PC)`。
+
+#### 👉 2. 安装 MicroPython 固件
+
+在 Thonny 中依次执行：
+
+* 菜单栏点击：**工具** → **安装或更新 MicroPython 固件**
+
+* 在弹出的窗口中选择：
+
+  | 选项            | 说明                                                         |
+  | ------------- | ---------------------------------------------------------- |
+  | **端口 (Port)** | 通常是 `COMx`（Windows）或 `/dev/ttyUSBx`（Linux/Mac），若不显示可点击「刷新」 |
+  | **板子类型**      | 选择 `ESP32` 或 `ESP8266`，根据你的开发板型号选择                         |
+  | **固件版本**      | 点击右侧「在线下载固件」，选择稳定版固件即可（也可以手动从官网下载 `.bin` 文件）               |
+
+* 点击【安装】开始烧录固件。整个过程大约 10\~30 秒。
+
+> 🔧 若遇到无法进入烧录状态的情况，可尝试按住开发板上的 `BOOT` 键，再点击「安装」。
+
+---
+
+### ✅ 四、验证固件是否安装成功
+
+烧录完成后：
+
+* 底部状态栏应显示为：`MicroPython (ESP32) - COMx` 或类似字样。
+* 点击 Thonny 的 Shell（终端）窗口，输入：
+
+```python
+print("Hello MicroPython!")
+```
+
+输出正常说明烧录成功 🎉
+
+---
+
+## 🔄 可选：使用 esptool 手动烧录（高级用户）
+
+如果你不使用 Thonny，也可以用 `esptool.py` 手动烧录：
+
+```bash
+pip install esptool
+esptool.py --chip esp32 erase_flash
+esptool.py --chip esp32 --port COMx --baud 460800 write_flash -z 0x1000 esp32-xxxxxx.bin
+```
+
+> 替换 `COMx` 为你电脑识别的串口号，`esp32-xxxxxx.bin` 为你的固件文件名。
+
+---
+
+### ✅ 安装成功后你可以继续：
+
+* 将本项目文件上传到开发板（`main.py`、各工具类）
+* 连接 UART 传感器，开始读取数据
+
+---
+
+如你需要我帮你提供具体固件下载链接（如最新版 ESP32 固件），也可以告诉我你的开发板型号，我可以一步到位给你打包好资源。
+
 
 ---
 
