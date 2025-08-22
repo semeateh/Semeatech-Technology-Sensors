@@ -207,21 +207,36 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 #### ✅ 2. 在你的主程序中调用：
 
 ```python
-from esp32api.SensorResponseParser import SensorResponseParser
-from esp32api.FactoryUtil import FactoryUtil
-from esp32api.SensorDataUtil import SensorDataUtil  # 导入外部定义的SensorDataUtil类
-
-
-# 初始化 UART 并读取数据
+# main.py（你的项目入口）
 from machine import UART, Pin
-uart = UART(1, baudrate=9600, tx=Pin(17), rx=Pin(16))
+import time
 
-uart.write(FactoryUtil.by_type_get_return(1, 9600))
-response = uart.read()
-hex_str = ' '.join(f'{byte:02x}' for byte in response)
-clean_str = SensorResponseParser.clean_string(hex_str)
-data = SensorDataUtil.substring_data_4(clean_str, FlagCode.F_SENSOR_TYPE1)
-print(data)
+from esp32api.SensorDataUtil import SensorDataUtil   # FlagCode & 工具
+from esp32api.SensorResponseParser import SensorResponseParser  # 应答解析器
+
+# 1) 选择你的传感器系列与波特率
+SENSOR_SERIES = 4      # 4 或 7（与你的硬件系列对应）
+BAUDRATE = 9600        # 4系列默认 9600，7系列通常 115200（也可自动检测，见下）
+
+# 2) 初始化 UART（按你的硬件引脚修改）
+uart = UART(1, baudrate=BAUDRATE, tx=Pin(17), rx=Pin(16))
+
+# 3) 发命令（示例：读取“气体类型”）
+cmd_bytes = SensorDataUtil.hex_string_to_byte_array(SensorDataUtil.FlagCode.F_SENSOR_TYPE1)
+uart.write(cmd_bytes)
+
+# 4) 读应答并解析
+time.sleep(0.1)
+if uart.any():
+    raw = uart.read()
+    hex_str = ' '.join(f'{b:02X}' for b in raw)  # 'AA 0F ...' 这种
+    parser = SensorResponseParser(SENSOR_SERIES, BAUDRATE)
+    # 4系列 type_id=1 => “气体类型”；7系列同理（见下方速查表）
+    result = parser.parse_response(hex_str, type_id=1)
+    print("解析结果：", result)
+else:
+    print("未收到应答")
+
 ```
 
 ---
