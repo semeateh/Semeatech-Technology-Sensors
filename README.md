@@ -130,10 +130,7 @@ git clone https://github.com/semeateh/Semeatech-Technology-Sensors.git
 
 ```
 main.py
-UAREIUtil.py
-SensorDateUtil.py
-SensorRespomseParser.py
-FactoryUtil.py
+communication.py
 test.py
 ```
 
@@ -142,7 +139,15 @@ test.py
 #### ✅ 开始运行
 
 将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
-
+    [1] 读取模块信息 (getInfo)
+    [2] 读取实时数据 (getReading)
+    [3] 读取标气浓度 (getSpanValue)
+    [4] 零点标定（聚合：7优先→4）
+    [5] 跨度标定（聚合：7优先→4）  ← 会询问 PPM
+    [T] 读取温度 (getTemp)   | 仅 7 系列
+    [H] 读取湿度 (getHumi)   | 仅 7 系列
+    [Q] 退出
+    
     # 4系列
     F_SENSOR_TYPE1 = "AA 0F 01 C5 80 EE"  # 终端读取模块信息命令
     F_SENSOR_NUM2 = "AA 01 01 C1 E0 EE"  # 终端发送浓度数据读取命令ppm
@@ -167,10 +172,10 @@ test.py
     S_SENSOR_SENSITIVITY_CALIBRATION9 = "3A 10 09 00 00 01 00 0A 03 FF"  # 灵敏度标定  D为00 0A 即：使用10PPM浓度气体进行标定
 
 你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
-
+示例：输入 `1`
 ```
 [UART] 收到数据: AA01020304...
-Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
+Parsed Data: {'gas': 'CO',}
 ```
 
 ---
@@ -199,44 +204,34 @@ Parsed Data: {'gas': 'CO', 'value': 4.12, 'unit': 'ppm'}
 
 #### ✅ 1. 复制以下模块文件：
 
-- `SensorDateUtil.py`
-- `SensorRespomseParser.py`
-- `FactoryUtil.py`
+- `communication.py`
+
 
 
 #### ✅ 2. 在你的主程序中调用：
 
 ```python
-# main.py（你的项目入口）
-from machine import UART, Pin
-import time
+from communication import communication
 
-from esp32api.SensorDataUtil import SensorDataUtil   # FlagCode & 工具
-from esp32api.SensorResponseParser import SensorResponseParser  # 应答解析器
+# 可选：配置 4 系列模块地址与 7 系列设备ID（默认 0x01 / 0x10）
+communication.addr_4 = 0x01
+communication.id_7   = 0x10
 
-# 1) 选择你的传感器系列与波特率
-SENSOR_SERIES = 4      # 4 或 7（与你的硬件系列对应）
-BAUDRATE = 9600        # 4系列默认 9600，7系列通常 115200（也可自动检测，见下）
+# 读取模块信息（自动判定优先 7 再 4）
+print(communication.getInfo())
 
-# 2) 初始化 UART（按你的硬件引脚修改）
-uart = UART(1, baudrate=BAUDRATE, tx=Pin(17), rx=Pin(16))
+# 实时数据（7 系列返回 μg/m³、ppb、温湿度；4 系列返回 ppm）
+print(communication.getReading())
 
-# 3) 发命令（示例：读取“气体类型”）
-cmd_bytes = SensorDataUtil.hex_string_to_byte_array(SensorDataUtil.FlagCode.F_SENSOR_TYPE1)
-uart.write(cmd_bytes)
+# 零点标定（聚合：先 7 后 4）
+print(communication.zeroCal())
 
-# 4) 读应答并解析
-time.sleep(0.1)
-if uart.any():
-    raw = uart.read()
-    hex_str = ' '.join(f'{b:02X}' for b in raw)  # 'AA 0F ...' 这种
-    parser = SensorResponseParser(SENSOR_SERIES, BAUDRATE)
-    # 4系列 type_id=1 => “气体类型”；7系列同理（见下方速查表）
-    result = parser.parse_response(hex_str, type_id=1)
-    print("解析结果：", result)
-else:
-    print("未收到应答")
+# 跨度标定（任意 PPM，动态CRC）：
+print(communication.spanCal(250))  # 例如 250 ppm
 
+# 温湿度（仅 7 系列支持）
+print("温度:", communication.getTemp())
+print("湿度:", communication.getHumi())
 ```
 
 ---
@@ -250,26 +245,12 @@ else:
 - 数据解析与打印
 - 心跳机制
 
-### 2. `SensorDateUtil` 类
+### 2. `communication` 类
 - 解析传感器返回的 hex 数据
 - 映射气体类型
 - 返回浓度值、单位、状态等信息
 
-### 3. `FlagCode` 类
-预定义了传感器指令，如：
-- `F_SENSOR_TYPE1`: 获取气体类型
-- `F_SENSOR_NUM2`: 获取气体浓度
-- `F_SENSOR_MODULE_ZERO3`: 发送校零指令
-- `F_SENSOR_MODULE_CALIBRATION4`: 发送标定指令
 
-### 4. `SensorRespomseParser` 类
-数据处理工具类：
-- Hex 字符串与 bytearray 转换
-- 字符串清洗
-- 十进制/十六进制转换
-
-### 5. `FactoryUtil` 类
-根据传感器类型生成指令，兼容不同波特率/型号。
 
 ---
 
