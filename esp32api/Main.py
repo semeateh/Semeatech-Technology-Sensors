@@ -7,10 +7,9 @@ from machine import UART, Pin
 from umqtt.simple import MQTTClient
 
 
-#from esp32api.SensorResponseParser import SensorResponseParser
-#from esp32api.FactoryUtil import FactoryUtil
-from esp32api.SensorDataUtil import SensorDataUtil  # 导入外部定义的SensorDataUtil类
-#from esp32api.UARTUtil import UARTUtil
+from esp32api.communication import communication
+
+
 
 class Main:
     sensor_flag = 1
@@ -263,6 +262,7 @@ class FactoryUtil:
 
 
         
+
 
 
 
