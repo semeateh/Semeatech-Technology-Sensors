@@ -139,6 +139,7 @@ test.py
 #### ✅ 开始运行
 
 将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
+
     [1] 读取模块信息 (getInfo)
     [2] 读取实时数据 (getReading)
     [3] 读取标气浓度 (getSpanValue)
