@@ -214,26 +214,36 @@ Parsed Data: {'gas': 'CO',}
 ```python
 from communication import communication
 
-# 可选：配置 4 系列模块地址与 7 系列设备ID（默认 0x01 / 0x10）
-communication.addr_4 = 0x01
-communication.id_7   = 0x10
+# ✅ 第一步：选择使用的 UART 串口
+# 若使用 ESP32，可选 UART(1) / UART(2)
+# 若使用树莓派 Pico，可选 UART(0) / UART(1)
+# 你可以根据硬件连接修改：
+communication.set_uart(uart_id=1, tx_pin=17, rx_pin=16, baudrate=9600)
 
-# 读取模块信息（自动判定优先 7 再 4）
+# ✅ 第二步（可选）：修改模块地址或 ID
+# 默认：
+#   4 系列模块地址：0x01
+#   7 系列模块 ID ：0x10
+# 若需要更改，可直接调用：
+communication.set_address(addr_4=0x02, id_7=0x12)
+# 该命令在运行时立即生效，无需改动源码
+
+# ✅ 第三步：读取模块信息（自动识别系列）
 print(communication.getInfo())
 
-# 实时数据（7 系列返回 μg/m³、ppb、温湿度；4 系列返回 ppm）
+# ✅ 第四步：读取实时数据
 print(communication.getReading())
 
-# 零点标定（聚合：先 7 后 4）
+# ✅ 第五步：零点标定
 print(communication.zeroCal())
 
-# 跨度标定（任意 PPM，动态CRC）：
-print(communication.spanCal(250))  # 例如 250 ppm
+# ✅ 第六步：跨度标定（任意 PPM，自动计算 CRC）
+print(communication.spanCal(250))
 
-# 温湿度（仅 7 系列支持）
+# ✅ 第七步：获取温湿度（仅 7 系列支持）
 print("温度:", communication.getTemp())
 print("湿度:", communication.getHumi())
-```
+
 
 ---
 
