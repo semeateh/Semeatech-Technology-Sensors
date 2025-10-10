@@ -243,7 +243,7 @@ print(communication.spanCal(250))
 # ✅ 第七步：获取温湿度（仅 7 系列支持）
 print("温度:", communication.getTemp())
 print("湿度:", communication.getHumi())
---
+```
 ---
 
 ## 📘 项目结构说明
