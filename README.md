@@ -218,7 +218,13 @@ from communication import communication
 # 若使用 ESP32，可选 UART(1) / UART(2)
 # 若使用树莓派 Pico，可选 UART(0) / UART(1)
 # 你可以根据硬件连接修改：
-communication.set_uart(uart_id=1, tx_pin=17, rx_pin=16, baudrate=9600)
+class _UARTWrapper:
+    def __init__(self, port=2, baudrate=9600, tx=None, rx=None, timeout=300):
+        if _MICROPY:
+            self.uart = UART(port, baudrate=baudrate, tx=tx or 17, rx=rx or 16, timeout=timeout)
+        else:
+            self.uart = _MockUART()
+
 
 # ✅ 第二步（可选）：修改模块地址或 ID
 # 默认：
