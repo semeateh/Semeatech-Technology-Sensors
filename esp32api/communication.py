@@ -199,6 +199,22 @@ class communication:
     id_7 = 0x10
 
     @staticmethod
+    def init_uart(port=2, baudrate=None, tx=None, rx=None, timeout=300):
+        """
+        用户自定义初始化 UART 串口接口。
+        参数：
+            port: 串口号 UART(1) / UART(2)
+            baudrate: 波特率（默认 4系=9600，7系=115200）
+            tx, rx: 对应引脚号
+            timeout: 超时时间
+        """
+        # 自动匹配波特率（若未指定）
+        if baudrate is None:
+            baudrate = 9600 if port == 1 else 115200
+        communication._uart = _UARTWrapper(port=port, baudrate=baudrate, tx=tx, rx=rx, timeout=timeout)
+        print(f"✅ UART 初始化完成: UART({port}), 波特率={baudrate}, TX={tx}, RX={rx}")    
+    
+    @staticmethod
     def _try_7_then_4(hex_cmd_7: str, hex_cmd_4: str, parse_7, parse_4, parse_id: int):
         rsp7 = communication._uart.send_hex_and_read(hex_cmd_7)
         if rsp7:
@@ -322,5 +338,6 @@ class communication:
         if rsp7:
             return {"ok": True, "series": 7, "raw": rsp7, "value": substring_data_7(rsp7, 5)}
         return {"ok": False, "series": None, "raw": "", "value": None}
+
 
 
