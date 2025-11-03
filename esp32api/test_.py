@@ -90,8 +90,18 @@ def ask_int(prompt, default=None, lo=0, hi=65535):
 
 
 def main():
-    print("提示：默认 UART 使用 communication.py 内部配置（ESP32: UART(2) TX=17 RX=16）。")
-    print("如需改引脚/波特率，请在 communication._UARTWrapper 中修改后再测试。\n")
+    
+    print("\n================ UART 初始化 =================")
+    try:
+        port = ask_int("请选择 UART 串口号 (1 或 2)", default=2, lo=1, hi=2)
+        baud = ask_int("请输入波特率 (推荐: 4系=9600, 7系=115200)", default=115200)
+        tx_pin = ask_int("请输入 TX 引脚编号（ESP32默认17）", default=17)
+        rx_pin = ask_int("请输入 RX 引脚编号（ESP32默认16）", default=16)
+        communication.init_uart(port=port, baudrate=baud, tx=tx_pin, rx=rx_pin)
+    except Exception as e:
+        print(f"⚠️ UART 初始化失败: {e}")
+        print("将使用默认 UART(2) TX=17 RX=16 配置。")
+
 
     while True:
         try:
@@ -134,6 +144,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
