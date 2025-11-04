@@ -407,13 +407,10 @@ print(communication.spanCal(span))
 校零、跨度标定、CRC 动态计算是否生效；
 
 温湿度数据可选验证。
-
-
-
 ---
 
 ## 📘 项目结构说明
-
+---
 ### 1. `Main` 类
 核心逻辑所在，包括：
 - UART 初始化
