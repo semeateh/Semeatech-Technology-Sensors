@@ -74,7 +74,7 @@ def _print_result(title, result):
         print("原结果对象：", result)
 
 
-def ask_int(prompt, default=None, lo=0, hi=65535):
+def ask_int(prompt, default=None, lo=0, hi=115200):
     try:
         s = input("%s%s: " % (prompt, f" [默认 {default}]" if default is not None else "")).strip()
         if s == "" and default is not None:
@@ -144,6 +144,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
