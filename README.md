@@ -252,15 +252,18 @@ value: 监测湿度为:53.47%RH
 ---
 
 ### 📦 4. 如何将本项目集成到你的项目中？
+#### ✅ 开始运行
 
-如果你有自己的项目结构，可以这样整合：
-# 1️⃣ 文件部署
+🧭 一、文件部署
 
 确保以下文件都已上传到开发板（或 Thonny 的设备端文件区）：
 
 communication.py
 
-# 2️⃣ 初始化 UART 串口
+
+（ts.py 可删除或忽略，本次我们只看 communication.py）
+
+⚙️ 二、初始化 UART 串口
 
 communication.py 默认使用 _UARTWrapper 类中的配置：
 
@@ -287,7 +290,7 @@ print(f"✅ UART 初始化完成: UART({port}), 波特率={baud}, TX={tx}, RX={r
 
 ✅ UART 初始化完成: UART(1), 波特率=9600, TX=17, RX=16
 
-# 3️⃣ 设置模块地址或 ID
+🧩 三、设置模块地址或 ID
 
 可通过命令直接设置（不需改源码）：
 
@@ -300,7 +303,7 @@ communication.id_7 = 0x10     # 7系列默认设备ID
 communication.addr_4 = int(input("请输入4系列模块地址 (默认 1): ") or "1")
 communication.id_7 = int(input("请输入7系列模块ID (默认 16): ") or "16")
 
-# 4️⃣ 功能调用示例
+🧪 四、功能调用示例
 
 下面每一步你都可以直接在 Thonny 的 Shell 中执行：
 
@@ -361,10 +364,10 @@ print(communication.getHumi())
 {'ok': True, 'series': 7, 'value': '监测温度为:23.45°C'}
 {'ok': True, 'series': 7, 'value': '监测湿度为:45.88%RH'}
 
-# 5️⃣ 示例脚本（可保存为 test_uart.py）
+💡 五、示例脚本（可保存为 test_uart.py）
 from communication import communication
 
- 1️⃣ 初始化 UART
+# 1️⃣ 初始化 UART
 port = int(input("UART 串口号 (1/2) [默认 2]: ") or 2)
 baud = int(input("波特率 [默认 9600]: ") or 9600)
 tx = int(input("TX 引脚 [默认 17]: ") or 17)
@@ -372,21 +375,21 @@ rx = int(input("RX 引脚 [默认 16]: ") or 16)
 communication._uart = communication._UARTWrapper(port=port, baudrate=baud, tx=tx, rx=rx)
 print(f"✅ UART 初始化完成: UART({port}), baud={baud}, TX={tx}, RX={rx}")
 
- 2️⃣ 设定模块地址
+# 2️⃣ 设定模块地址
 communication.addr_4 = int(input("请输入4系列地址(默认1): ") or "1")
 communication.id_7 = int(input("请输入7系列ID(默认16): ") or "16")
 
- 3️⃣ 读取模块信息
+# 3️⃣ 读取模块信息
 print(communication.getInfo())
 
- 4️⃣ 获取实时数据
+# 4️⃣ 获取实时数据
 print(communication.getReading())
 
- 5️⃣ 跨度标定
+# 5️⃣ 跨度标定
 span = int(input("输入跨度标定浓度（ppm）: ") or "250")
 print(communication.spanCal(span))
 
-# 6 预期测试结果
+🧾 六、预期测试结果
 操作	预期输出示例
 初始化 UART	✅ UART 初始化完成
 读取信息	返回系列号与气体类型
@@ -394,7 +397,7 @@ print(communication.spanCal(span))
 零点标定	“模块校零成功” 或 “标定成功”
 跨度标定	“标定成功” 且显示动态 CRC 帧内容
 读取温湿度	返回数值 °C 与 %RH
-# 7 测试结论
+✅ 七、测试结论
 
 本测试流程能验证：
 
@@ -406,6 +409,7 @@ print(communication.spanCal(span))
 
 温湿度数据可选验证。
 
+---
 
 ## 📘 项目结构说明
 
