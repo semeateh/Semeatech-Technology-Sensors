@@ -165,13 +165,14 @@ OK?: True
 raw: AA 0F 01 0B 01 F4 00 64 00 32 00 19 02 8A E5 EE
 info: NH3 (code=11)
 ```
+```
 示例：输入 `2`
 --- getSpanValue() ---
 OK?: True
 raw: AA 01 01 00 00 08 00 3B CA EE
 value: 2048 ppm
 ```
-```
+
 示例：输入 `3`
 --- getSpanValue() ---
 OK?: True
