@@ -183,8 +183,8 @@ value: 2048 ppm
 示例：输入 `4`
 --- zeroCal() 聚合 ---
 OK?: True
-raw: 3A 10 07 00 00 01 00 E4 82 9D
-result: 零点标定返回数值:228
+raw: AA 02 01 10 D0 5C EE
+result: 模块校零成功
 ```
 ```
 示例：输入 `5`
