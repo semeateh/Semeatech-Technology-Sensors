@@ -158,10 +158,24 @@ test.py
     
    
 你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
-示例：输入 `1`
 ```
-[UART] 收到数据: AA01020304...
-Parsed Data: {'gas': 'CO',}
+示例：输入 `1`
+--- getInfo() ---
+OK?: True
+raw: AA 0F 01 0B 01 F4 00 64 00 32 00 19 02 8A E5 EE
+info: NH3 (code=11)
+```
+示例：输入 `2`
+--- getReading() ---
+OK?: True
+raw: AA 01 01 00 00 08 00 3B CA EE
+parsed: 2048 ppm
+```
+示例：输入 `3`
+--- getSpanValue() ---
+OK?: True
+raw: AA 01 01 00 00 08 00 3B CA EE
+value: 2048 ppm
 ```
 
 ---
