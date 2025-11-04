@@ -255,15 +255,15 @@ value: 监测湿度为:53.47%RH
 
 如果你有自己的项目结构，可以这样整合：
 
-#### ✅ 1. 复制以下模块文件：
+🧭 一、文件部署
 
-- `communication.py`
+确保以下文件都已上传到开发板（或 Thonny 的设备端文件区）：
+
+communication.py
 
 
+（ts.py 可删除或忽略，本次我们只看 communication.py）
 
-#### ✅ 2. 在你的主程序中调用：
-
-```python
 ⚙️ 二、初始化 UART 串口
 
 communication.py 默认使用 _UARTWrapper 类中的配置：
@@ -409,8 +409,6 @@ print(communication.spanCal(span))
 校零、跨度标定、CRC 动态计算是否生效；
 
 温湿度数据可选验证。
-```
----
 
 ## 📘 项目结构说明
 
