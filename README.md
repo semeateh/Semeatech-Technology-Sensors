@@ -271,8 +271,6 @@ value: 监测湿度为:53.47%RH
 communication.py
 
 
-（ts.py 可删除或忽略，本次我们只看 communication.py）
-
 ⚙️ 二、初始化 UART 串口
 
 communication.py 默认使用 _UARTWrapper 类中的配置：
