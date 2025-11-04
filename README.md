@@ -172,7 +172,7 @@ OK?: True
 raw: AA 01 01 00 00 08 00 3B CA EE
 value: 2048 ppm
 ```
-
+```
 示例：输入 `3`
 --- getSpanValue() ---
 OK?: True
