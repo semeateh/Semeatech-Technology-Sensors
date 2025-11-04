@@ -179,6 +179,17 @@ OK?: True
 raw: AA 01 01 00 00 08 00 3B CA EE
 value: 2048 ppm
 ```
+```
+示例：输入 `4`
+--- zeroCal() 聚合 ---
+OK?: True
+raw: 3A 10 07 00 00 01 00 E4 82 9D
+result: 零点标定返回数值:228
+```
+```
+示例：输入 `5`
+输入跨度标定浓度（PPM） [默认 250]:
+```
 
 ---
 
@@ -409,6 +420,8 @@ print(communication.spanCal(span))
 温湿度数据可选验证。
 ---
 
+---
+
 ## 📘 项目结构说明
 ---
 ### 1. `Main` 类
@@ -418,12 +431,12 @@ print(communication.spanCal(span))
 - 数据解析与打印
 - 心跳机制
 
+---
+
 ### 2. `communication` 类
 - 解析传感器返回的 hex 数据
 - 映射气体类型
 - 返回浓度值、单位、状态等信息
-
-
 
 ---
 
