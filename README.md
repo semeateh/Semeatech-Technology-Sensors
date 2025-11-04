@@ -337,7 +337,7 @@ print(communication.getSpanValue())
 
 返回内容：
 
-{'ok': True, 'series': 7, 'value': {'ugm3': '145 μg/m³', 'ppb': '78 ppb'}}
+{'ok': True, 'series': 7, 'value': {'μg/m³': '145 μg/m³', 'ppb': '78 ppb'}}
 
 4️⃣ 零点标定
 print(communication.zeroCal())
