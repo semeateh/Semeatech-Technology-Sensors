@@ -239,8 +239,8 @@ class communication:
         if rsp7a or rsp7b:
             out = {"series": 7, "raw": {}, "value": {}, "ok": True}
             if rsp7a:
-                out["raw"]["ugm3"] = rsp7a
-                out["value"]["ugm3"] = substring_data_7(rsp7a, 2)
+                out["raw"]["μg/m³"] = rsp7a
+                out["value"]["μg/m³"] = substring_data_7(rsp7a, 2)
             if rsp7b:
                 out["raw"]["ppb"] = rsp7b
                 out["value"]["ppb"] = substring_data_7(rsp7b, 3)
@@ -338,6 +338,7 @@ class communication:
         if rsp7:
             return {"ok": True, "series": 7, "raw": rsp7, "value": substring_data_7(rsp7, 5)}
         return {"ok": False, "series": None, "raw": "", "value": None}
+
 
 
 
