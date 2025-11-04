@@ -264,49 +264,151 @@ value: 监测湿度为:53.47%RH
 #### ✅ 2. 在你的主程序中调用：
 
 ```python
+⚙️ 二、初始化 UART 串口
+
+communication.py 默认使用 _UARTWrapper 类中的配置：
+
+# communication.py 中的默认配置
+_UARTWrapper(port=2, baudrate=9600, tx=17, rx=16)
+
+
+你可以直接在交互式终端中运行如下代码：
+
 from communication import communication
 
-# ✅ 第一步：选择使用的 UART 串口
-# 若使用 ESP32，可选 UART(1) / UART(2)
-# 若使用树莓派 Pico，可选 UART(0) / UART(1)
-# 你可以根据硬件连接修改：
-class _UARTWrapper:
-    def __init__(self, port=2, baudrate=9600, tx=None, rx=None, timeout=300):
-        if _MICROPY:
-            self.uart = UART(port, baudrate=baudrate, tx=tx or 17, rx=rx or 16, timeout=timeout)
-        else:
-            self.uart = _MockUART()
-# 也可以根据tset.py进行传参修改：
-================ UART 初始化 =================
-请选择 UART 串口号 (1 或 2) [默认 2]: 1
-请输入波特率 (推荐: 4系=9600, 7系=115200) [默认 115200]: 9600
-请输入 TX 引脚编号（ESP32默认17） [默认 17]: 17
-请输入 RX 引脚编号（ESP32默认16） [默认 16]: 16
+# 修改 UART 串口参数（推荐交互输入）
+port = int(input("请选择 UART 串口号 (1 或 2) [默认 2]: ") or 2)
+baud = int(input("请输入波特率 (4系=9600, 7系=115200) [默认 9600]: ") or 9600)
+tx = int(input("请输入 TX 引脚编号 [默认 17]: ") or 17)
+rx = int(input("请输入 RX 引脚编号 [默认 16]: ") or 16)
+
+# 创建 UART 通讯对象
+communication._uart = communication._UARTWrapper(port=port, baudrate=baud, tx=tx, rx=rx)
+print(f"✅ UART 初始化完成: UART({port}), 波特率={baud}, TX={tx}, RX={rx}")
+
+
+运行后你会看到：
+
 ✅ UART 初始化完成: UART(1), 波特率=9600, TX=17, RX=16
 
-# ✅ 第二步（可选）：修改模块地址或 ID
-# 默认：
-#   4 系列模块地址：0x01
-#   7 系列模块 ID ：0x10
-# 若需要更改，可直接调用：
-communication.set_address(addr_4=0x02, id_7=0x12)
-# 该命令在运行时立即生效，无需改动源码
+🧩 三、设置模块地址或 ID
 
-# ✅ 第三步：读取模块信息（自动识别系列）
+可通过命令直接设置（不需改源码）：
+
+communication.addr_4 = 0x01   # 4系列默认地址
+communication.id_7 = 0x10     # 7系列默认设备ID
+
+
+或动态修改：
+
+communication.addr_4 = int(input("请输入4系列模块地址 (默认 1): ") or "1")
+communication.id_7 = int(input("请输入7系列模块ID (默认 16): ") or "16")
+
+🧪 四、功能调用示例
+
+下面每一步你都可以直接在 Thonny 的 Shell 中执行：
+
+1️⃣ 读取模块信息（自动识别系列）
 print(communication.getInfo())
 
-# ✅ 第四步：读取实时数据
+
+输出示例：
+
+{'ok': True, 'series': 7, 'raw': '3A 10 01 00 ...', 'info': 'O2 (code=3)'}
+
+2️⃣ 读取实时数据
 print(communication.getReading())
 
-# ✅ 第五步：零点标定
+
+输出示例：
+
+{'ok': True, 'series': 4, 'raw': 'AA0101C1...', 'parsed': '102 ppm'}
+
+3️⃣ 读取标气浓度（span value）
+print(communication.getSpanValue())
+
+
+返回内容：
+
+{'ok': True, 'series': 7, 'value': {'ugm3': '145 μg/m³', 'ppb': '78 ppb'}}
+
+4️⃣ 零点标定
 print(communication.zeroCal())
 
-# ✅ 第六步：跨度标定（任意 PPM，自动计算 CRC）
+
+返回：
+
+{'ok': True, 'series': 4, 'result': '模块校零成功'}
+
+5️⃣ 跨度标定（任意浓度自动计算 CRC）
 print(communication.spanCal(250))
 
-# ✅ 第七步：获取温湿度（仅 7 系列支持）
-print("温度:", communication.getTemp())
-print("湿度:", communication.getHumi())
+
+返回：
+
+{
+  'ok': True,
+  'series': 7,
+  'request': {'7': '3A 10 09 00 00 01 00 FA 32 3F', '4': 'AA 05 01 00 FA A1 4B EE'},
+  'response': {'7': '3A 10 09 00 00 32 3F'},
+  'result': '标定成功',
+  'note2': 'span=250 ppm, id7=0x10, addr4=0x01'
+}
+
+6️⃣ 读取温湿度（仅 7 系列）
+print(communication.getTemp())
+print(communication.getHumi())
+
+
+输出：
+
+{'ok': True, 'series': 7, 'value': '监测温度为:23.45°C'}
+{'ok': True, 'series': 7, 'value': '监测湿度为:45.88%RH'}
+
+💡 五、示例脚本（可保存为 test_uart.py）
+from communication import communication
+
+# 1️⃣ 初始化 UART
+port = int(input("UART 串口号 (1/2) [默认 2]: ") or 2)
+baud = int(input("波特率 [默认 9600]: ") or 9600)
+tx = int(input("TX 引脚 [默认 17]: ") or 17)
+rx = int(input("RX 引脚 [默认 16]: ") or 16)
+communication._uart = communication._UARTWrapper(port=port, baudrate=baud, tx=tx, rx=rx)
+print(f"✅ UART 初始化完成: UART({port}), baud={baud}, TX={tx}, RX={rx}")
+
+# 2️⃣ 设定模块地址
+communication.addr_4 = int(input("请输入4系列地址(默认1): ") or "1")
+communication.id_7 = int(input("请输入7系列ID(默认16): ") or "16")
+
+# 3️⃣ 读取模块信息
+print(communication.getInfo())
+
+# 4️⃣ 获取实时数据
+print(communication.getReading())
+
+# 5️⃣ 跨度标定
+span = int(input("输入跨度标定浓度（ppm）: ") or "250")
+print(communication.spanCal(span))
+
+🧾 六、预期测试结果
+操作	预期输出示例
+初始化 UART	✅ UART 初始化完成
+读取信息	返回系列号与气体类型
+读取数据	返回浓度与单位
+零点标定	“模块校零成功” 或 “标定成功”
+跨度标定	“标定成功” 且显示动态 CRC 帧内容
+读取温湿度	返回数值 °C 与 %RH
+✅ 七、测试结论
+
+本测试流程能验证：
+
+串口通讯是否畅通；
+
+模块是否识别（4系 / 7系 自动检测）；
+
+校零、跨度标定、CRC 动态计算是否生效；
+
+温湿度数据可选验证。
 ```
 ---
 
