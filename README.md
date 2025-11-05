@@ -130,6 +130,7 @@ git clone https://github.com/semeateh/Semeatech-Technology-Sensors.git
 
 ```
 main.py
+Main.py
 communication.py
 test.py
 ```
