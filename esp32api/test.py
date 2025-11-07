@@ -1,3 +1,4 @@
+
 # test_comm_thonny.py
 # 在 Thonny（MicroPython）环境下测试 4/7 系列传感器通讯与标定流程
 # - 集成模块元信息显示（module.json）
