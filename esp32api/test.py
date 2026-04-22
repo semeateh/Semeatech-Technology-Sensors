@@ -1,16 +1,18 @@
-# test_comm_thonny.py
-# 在 Thonny（MicroPython）环境下测试 4/7 系列传感器通讯与标定流程
-# - 集成模块元信息显示（module.json）
-# - 调用 communication.py 中的通信函数
+# test.py
+# 在 Thonny / MicroPython 环境下测试 4 系列 / 7 系列传感器通信与标定流程。
+#
+# 本次升级说明：
+# - 保留原来的菜单交互方式，方便内部继续联调。
+# - 底层由 communication 静态调用切换为 SensorClient 实例调用。
+# - 这样既不改变测试使用习惯，也能覆盖新的 SDK 集成路径。
 
-import time
 import json
 import os
 
 try:
-    from esp32api.communication import communication, bytes_to_hex
+    from esp32api import SensorClient
 except Exception as e:
-    print("❌ 无法导入 communication.py，请确认文件已上传到设备根目录。")
+    print("无法导入 SensorClient，请确认文件已上传到设备根目录。")
     print("错误信息：", e)
     raise SystemExit
 
@@ -32,19 +34,19 @@ print(f"[模块信息] {MODULE_NAME} v{MODULE_VER}")
 print("===============================================")
 
 # ---------- 菜单 ----------
-MENU = """
+def build_menu():
+    return """
 ================= Sematech 传感器通讯测试 =================
 [1] 读取模块信息 (getInfo)
 [2] 读取实时数据 (getReading)
 [3] 读取标气浓度 (getSpanValue)
-[4] 零点标定（聚合：7优先→4）
-[5] 跨度标定（聚合：7优先→4）  ← 会询问 PPM
+[4] 零点标定（聚合：7优先）
+[5] 跨度标定（聚合：7优先） -> 会询问 PPM
 [T] 读取温度 (getTemp)   | 仅 7 系列
 [H] 读取湿度 (getHumi)   | 仅 7 系列
 [Q] 退出
 =========================================================
-""" % (communication.addr_4 & 0xFF, communication.id_7 & 0xFF)
-
+"""
 
 
 def _print_result(title, result):
@@ -52,6 +54,7 @@ def _print_result(title, result):
     if result is None:
         print("无返回")
         return
+
     try:
         ok = result.get("ok")
         print("OK?:", ok)
@@ -77,7 +80,8 @@ def _print_result(title, result):
 
 def ask_int(prompt, default=None, lo=0, hi=115200):
     try:
-        s = input("%s%s: " % (prompt, f" [默认 {default}]" if default is not None else "")).strip()
+        label = f" [默认 {default}]" if default is not None else ""
+        s = input("%s%s: " % (prompt, label)).strip()
         if s == "" and default is not None:
             return default
         v = int(float(s))
@@ -91,64 +95,59 @@ def ask_int(prompt, default=None, lo=0, hi=115200):
 
 
 def main():
-    
-    print("\n================ UART 初始化 =================")
+    print("\n================ UART 初始化 ================")
+
+    client = None
     try:
         port = ask_int("请选择 UART 串口号 (1 或 2)", default=2, lo=1, hi=2)
         baud = ask_int("请输入波特率 (推荐: 4系=9600, 7系=115200)", default=115200)
         tx_pin = ask_int("请输入 TX 引脚编号（ESP32默认17）", default=17)
         rx_pin = ask_int("请输入 RX 引脚编号（ESP32默认16）", default=16)
-        communication.init_uart(port=port, baudrate=baud, tx=tx_pin, rx=rx_pin)
-    except Exception as e:
-        print(f"⚠️ UART 初始化失败: {e}")
-        print("将使用默认 UART(2) TX=17 RX=16 配置。")
 
+        # 保留原有测试脚本的输入方式，但底层切换为 SensorClient。
+        client = SensorClient(port=port, baudrate=baud, tx=tx_pin, rx=rx_pin)
+    except Exception as e:
+        print(f"UART 初始化失败：{e}")
+        print("将使用默认 UART(2) TX=17 RX=16 配置。")
+        client = SensorClient(port=2, baudrate=115200, tx=17, rx=16)
 
     while True:
         try:
-            cmd = input(MENU + "请输入指令：").strip().upper()
+            cmd = input(build_menu() + "请输入指令：").strip().upper()
         except (EOFError, KeyboardInterrupt):
             print("\nBye.")
             break
 
         if cmd == "1":
-            _print_result("getInfo()", communication.getInfo())
+            _print_result("getInfo()", client.getInfo())
 
         elif cmd == "2":
-            _print_result("getReading()", communication.getReading())
+            _print_result("getReading()", client.getReading())
 
         elif cmd == "3":
-            _print_result("getSpanValue()", communication.getSpanValue())
+            _print_result("getSpanValue()", client.getSpanValue())
 
         elif cmd == "4":
-            _print_result("zeroCal() 聚合", communication.zeroCal())
+            _print_result("zeroCal() 聚合", client.zeroCal())
 
         elif cmd == "5":
             span = ask_int("输入跨度标定浓度（PPM）", default=250)
             if span is not None:
-                _print_result(f"spanCal({span}) 聚合", communication.spanCal(span, prefer="7-first"))
-
+                _print_result(f"spanCal({span}) 聚合", client.spanCal(span, prefer="7-first"))
 
         elif cmd == "T":
-            _print_result("getTemp()", communication.getTemp())
+            _print_result("getTemp()", client.getTemp())
 
         elif cmd == "H":
-            _print_result("getHumi()", communication.getHumi())
-
+            _print_result("getHumi()", client.getHumi())
 
         elif cmd == "Q":
             print("Bye.")
             break
+
         else:
             print("无效指令，请重试。")
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
