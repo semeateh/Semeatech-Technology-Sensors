@@ -1,8 +1,8 @@
 from machine import UART, Pin
 import time
 
-# UART1 配置：用于收发和打印数据
-uart1 = UART(1, baudrate=115200, tx=Pin(12), rx=Pin(13))
+# UART1 配置：对应 4 系列，默认波特率 9600
+uart1 = UART(1, baudrate=9600, tx=Pin(12), rx=Pin(13))
 
 # UART2 配置：用于与传感器通信
 uart2 = UART(2, baudrate=115200, tx=Pin(17), rx=Pin(16))

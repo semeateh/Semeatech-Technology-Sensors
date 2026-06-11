@@ -25,7 +25,7 @@ if "module.json" in os.listdir():
             MODULE_VER = meta.get("version", "0.0")
     except Exception as e:
         MODULE_NAME, MODULE_VER = "Unknown", "0.0"
-        print("⚠️ 读取 module.json 失败：", e)
+        print("读取 module.json 失败：", e)
 else:
     # 如果文件不存在，则使用内置默认
     MODULE_NAME, MODULE_VER = "DemoModule", "1.0"
@@ -99,7 +99,7 @@ def main():
 
     client = None
     try:
-        port = ask_int("请选择 UART 串口号 (1 或 2)", default=2, lo=1, hi=2)
+        port = ask_int("请选择 UART 串口号 (1=4系列, 2=7系列)", default=2, lo=1, hi=2)
         baud = ask_int("请输入波特率 (推荐: 4系=9600, 7系=115200)", default=115200)
         tx_pin = ask_int("请输入 TX 引脚编号（ESP32默认17）", default=17)
         rx_pin = ask_int("请输入 RX 引脚编号（ESP32默认16）", default=16)

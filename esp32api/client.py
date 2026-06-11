@@ -44,7 +44,7 @@ class SensorClient:
         self,
         uart=None,
         port=None,
-        baudrate=9600,
+        baudrate=None,
         tx=None,
         rx=None,
         timeout=300,
@@ -84,7 +84,7 @@ class SensorClient:
         resolved_timeout = self.timeout if timeout is None else timeout
 
         if resolved_baudrate is None:
-            resolved_baudrate = 9600
+            resolved_baudrate = self._default_baudrate_for_port(resolved_port)
         if resolved_timeout is None:
             resolved_timeout = 300
 
@@ -121,6 +121,10 @@ class SensorClient:
         self.rx = resolved_rx
         self.timeout = resolved_timeout
         return self
+
+    def _default_baudrate_for_port(self, port):
+        """根据当前硬件约定推导默认波特率。"""
+        return 9600 if int(port) == 1 else 115200
 
     def set_address(self, addr_4=None, id_7=None):
         """更新 4 系列地址或 7 系列设备 ID。"""

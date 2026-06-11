@@ -87,14 +87,23 @@ def save_config(config):
 
 
 def default_baudrate_for_port(port):
+    # 当前硬件约定：
+    # UART(1) 对应 4 系列，默认波特率 9600
+    # UART(2) 对应 7 系列，默认波特率 115200
     return 9600 if int(port) == 1 else 115200
 
 
 def normalize_config(config):
+    source = config or {}
     normalized = dict(DEFAULT_CONFIG)
-    normalized.update(config or {})
+    normalized.update(source)
     normalized["port"] = int(normalized.get("port", DEFAULT_CONFIG["port"]))
-    normalized["baudrate"] = default_baudrate_for_port(normalized["port"])
+    # 只有在调用方明确传入波特率时才保留它，
+    # 否则根据当前串口号自动给出推荐默认值。
+    if "baudrate" in source and source.get("baudrate") not in (None, ""):
+        normalized["baudrate"] = int(source.get("baudrate"))
+    else:
+        normalized["baudrate"] = default_baudrate_for_port(normalized["port"])
     normalized["tx"] = int(normalized.get("tx", DEFAULT_CONFIG["tx"]))
     normalized["rx"] = int(normalized.get("rx", DEFAULT_CONFIG["rx"]))
     normalized["addr_4"] = int(normalized.get("addr_4", DEFAULT_CONFIG["addr_4"]))
@@ -202,7 +211,13 @@ def print_title():
 def print_config_summary(config):
     _safe_print("")
     _safe_print("当前连接参数:")
-    _safe_print("  串口: UART(%s)" % config.get("port"))
+    _safe_print(
+        "  串口: UART(%s) (%s)"
+        % (
+            config.get("port"),
+            "4系列" if int(config.get("port", 2)) == 1 else "7系列",
+        )
+    )
     _safe_print("  波特率: %s" % config.get("baudrate"))
     _safe_print("  TX/RX: %s / %s" % (config.get("tx"), config.get("rx")))
     _safe_print("  4系列地址: %s" % config.get("addr_4"))
@@ -285,10 +300,17 @@ def auto_detect():
 def manual_setup():
     _safe_print("")
     _safe_print("进入高级设置。以下参数仅建议工程人员修改。")
+    _safe_print("硬件约定: UART(1) 对应 4系列，UART(2) 对应 7系列。")
     config = normalize_config(DEFAULT_CONFIG)
     config["port"] = ask_int("UART 串口号", default=config["port"], minimum=1, maximum=2)
-    config["baudrate"] = default_baudrate_for_port(config["port"])
-    _safe_print("当前串口对应的固定波特率为: %s" % config["baudrate"])
+    recommended_baudrate = default_baudrate_for_port(config["port"])
+    config["baudrate"] = ask_int(
+        "波特率",
+        default=recommended_baudrate,
+        minimum=1200,
+        maximum=2000000,
+    )
+    _safe_print("推荐波特率: UART(%s) 常用 %s" % (config["port"], recommended_baudrate))
     config["tx"] = ask_int("TX 引脚", default=config["tx"], minimum=0, maximum=99)
     config["rx"] = ask_int("RX 引脚", default=config["rx"], minimum=0, maximum=99)
     config["addr_4"] = ask_int("4系列地址", default=config["addr_4"], minimum=0, maximum=255)

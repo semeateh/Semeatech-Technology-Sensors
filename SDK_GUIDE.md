@@ -31,7 +31,7 @@ V3 不是推翻旧接口，而是在原有 `communication` 静态接口的基础
 from machine import UART, Pin
 from esp32api import SensorClient
 
-uart = UART(2, baudrate=9600, tx=Pin(17), rx=Pin(16))
+uart = UART(2, baudrate=115200, tx=Pin(17), rx=Pin(16))
 client = SensorClient(uart=uart)
 
 print(client.getInfo())
@@ -45,7 +45,7 @@ print(client.getReading())
 ```python
 from esp32api import SensorClient
 
-client = SensorClient(port=2, baudrate=9600, tx=17, rx=16)
+client = SensorClient(port=2, baudrate=115200, tx=17, rx=16)
 
 print(client.getInfo())
 print(client.getReading())
@@ -57,7 +57,7 @@ print(client.getReading())
 
 | 参数 | 说明 | 示例 |
 |------|------|------|
-| `uart` | 外部已创建好的 UART 对象 | `UART(2, baudrate=9600, ...)` |
+| `uart` | 外部已创建好的 UART 对象 | `UART(2, baudrate=115200, ...)` |
 | `port` | 串口号 | `1` / `2` |
 | `baudrate` | 波特率 | `9600` / `115200` |
 | `tx` | TX 引脚 | `17` 或 `Pin(17)` |
@@ -70,6 +70,14 @@ print(client.getReading())
 
 - 如果传入 `uart`，SDK 会直接复用这个对象
 - 如果没有传入 `uart`，则由 SDK 内部根据 `port / baudrate / tx / rx` 创建 UART
+- 如果只传入 `port`，SDK 会按默认硬件约定自动补齐波特率
+
+当前项目默认硬件约定如下：
+
+- `UART(1)` 对应 `4系列`，默认波特率为 `9600`
+- `UART(2)` 对应 `7系列`，默认波特率为 `115200`
+
+如果客户的硬件设计与此不同，可以继续自定义 `UART(...)` 参数后再传入 `SensorClient`。
 
 ## 5. 主要接口
 
@@ -136,7 +144,7 @@ else:
 ```python
 from esp32api.communication import communication
 
-communication.init_uart(port=2, baudrate=9600, tx=17, rx=16)
+communication.init_uart(port=2, baudrate=115200, tx=17, rx=16)
 print(communication.getInfo())
 print(communication.getReading())
 ```
@@ -185,10 +193,15 @@ uart = UART(1, baudrate=9600, tx=..., rx=...)
 或者：
 
 ```python
-uart = UART(2, baudrate=9600, tx=..., rx=...)
+uart = UART(2, baudrate=115200, tx=..., rx=...)
 ```
 
 然后把这个 UART 传给 `SensorClient`。
+
+如果按当前项目默认接线，建议优先使用：
+
+- `UART(1) + 9600` 连接 `4系列`
+- `UART(2) + 115200` 连接 `7系列`
 
 ### 2. 如果不知道模块是 4 系列还是 7 系列怎么办
 

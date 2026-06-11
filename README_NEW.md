@@ -299,7 +299,7 @@ customer_mode_v2_config.json
 from machine import UART, Pin
 from esp32api import SensorClient
 
-uart = UART(2, baudrate=9600, tx=Pin(17), rx=Pin(16))
+uart = UART(2, baudrate=115200, tx=Pin(17), rx=Pin(16))
 client = SensorClient(uart=uart)
 
 print(client.getInfo())
@@ -311,11 +311,16 @@ print(client.getReading())
 ```python
 from esp32api import SensorClient
 
-client = SensorClient(port=2, baudrate=9600, tx=17, rx=16)
+client = SensorClient(port=2, baudrate=115200, tx=17, rx=16)
 
 print(client.getInfo())
 print(client.getReading())
 ```
+
+如果只传 `port`，SDK 会按默认硬件约定自动补齐波特率：
+
+- `port=1` 默认 `9600`
+- `port=2` 默认 `115200`
 
 ## 旧接口兼容
 
@@ -410,10 +415,17 @@ uart = UART(1, baudrate=9600, tx=..., rx=...)
 或者：
 
 ```python
-uart = UART(2, baudrate=9600, tx=..., rx=...)
+uart = UART(2, baudrate=115200, tx=..., rx=...)
 ```
 
 然后把这个 UART 传给 `SensorClient`。
+
+按当前项目默认硬件约定：
+
+- `UART(1)` 对应 `4系列`，默认波特率 `9600`
+- `UART(2)` 对应 `7系列`，默认波特率 `115200`
+
+如果客户使用的是不同的主控板或不同的串口分配，也可以自己指定新的 `UART(...)` 参数。
 
 ### 4. UART 数据不完整怎么办
 

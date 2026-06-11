@@ -7,6 +7,8 @@ try:
     from machine import UART, Pin
     _MICROPY = True
 except ImportError:
+    UART = None
+    Pin = None
     _MICROPY = False
 
 # ---------- 工具函数 ----------
@@ -148,12 +150,44 @@ class _MockUART:
     def inject(self, hex_rsp: str):
         self._buf += hex_to_bytes(hex_rsp)
 
+
+def _normalize_pin(pin):
+    """
+    兼容两种引脚写法：
+    1. 直接传数字，例如 17
+    2. 直接传 Pin(17) 对象
+    """
+    if pin is None or not _MICROPY:
+        return pin
+    if isinstance(pin, int):
+        return Pin(pin)
+    return pin
+
+
 class _UARTWrapper:
-    def __init__(self, port=2, baudrate=9600, tx=None, rx=None, timeout=300):
-        if _MICROPY:
-            self.uart = UART(port, baudrate=baudrate, tx=tx or 17, rx=rx or 16, timeout=timeout)
+    """
+    统一包装 UART 访问。
+
+    兼容两种模式：
+    1. 传入原始 UART 对象，由包装层统一提供 send_hex_and_read
+    2. 传入 port / baudrate / tx / rx，由内部创建 UART
+    """
+
+    def __init__(self, port=2, baudrate=115200, tx=None, rx=None, timeout=300, uart=None):
+        if uart is not None:
+            # 如果已经传入底层 UART 或别的包装对象，这里统一取其实际串口对象。
+            self.uart = uart.uart if hasattr(uart, "uart") else uart
+        elif _MICROPY:
+            self.uart = UART(
+                port,
+                baudrate=baudrate,
+                tx=_normalize_pin(17 if tx is None else tx),
+                rx=_normalize_pin(16 if rx is None else rx),
+                timeout=timeout,
+            )
         else:
             self.uart = _MockUART()
+
     def send_hex_and_read(self, hex_cmd: str, delay_ms: int = 100) -> str:
         self.uart.write(hex_to_bytes(hex_cmd))
         sleep(max(delay_ms, 1) / 1000)
@@ -194,12 +228,12 @@ class communication:
       - 4 系列默认地址 addr_4 = 0x01
       - 7 系列默认设备码 id_7 = 0x10
     """
-    _uart = _UARTWrapper()
+    _uart = _UARTWrapper(port=2, baudrate=115200, tx=17, rx=16)
     addr_4 = 0x01
     id_7 = 0x10
 
     @staticmethod
-    def init_uart(port=2, baudrate=None, tx=None, rx=None, timeout=300):
+    def init_uart(port=2, baudrate=None, tx=None, rx=None, timeout=300, uart=None):
         """
         用户自定义初始化 UART 串口接口。
         参数：
@@ -207,12 +241,18 @@ class communication:
             baudrate: 波特率（默认 4系=9600，7系=115200）
             tx, rx: 对应引脚号
             timeout: 超时时间
+            uart: 已经初始化好的 UART 对象
         """
+        if uart is not None:
+            communication._uart = _UARTWrapper(uart=uart, timeout=timeout)
+            print("UART 初始化完成: 已使用外部 UART 对象")
+            return
+
         # 自动匹配波特率（若未指定）
         if baudrate is None:
             baudrate = 9600 if port == 1 else 115200
         communication._uart = _UARTWrapper(port=port, baudrate=baudrate, tx=tx, rx=rx, timeout=timeout)
-        print(f"✅ UART 初始化完成: UART({port}), 波特率={baudrate}, TX={tx}, RX={rx}")    
+        print(f"UART 初始化完成: UART({port}), 波特率={baudrate}, TX={tx}, RX={rx}")
     
     @staticmethod
     def _try_7_then_4(hex_cmd_7: str, hex_cmd_4: str, parse_7, parse_4, parse_id: int):
