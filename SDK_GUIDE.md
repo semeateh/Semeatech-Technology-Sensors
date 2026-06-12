@@ -1,31 +1,10 @@
 # Sematech Sensors SDK 集成指南
 
-## 1. 文档定位
+本文档面向需要把 Sematech 传感器接入自己 MicroPython 项目的开发者。项目总览、客户模式和工程模式说明见 [README.md](./README.md)。
 
-本文档是 V3 版本下的 SDK 开发文档，面向需要将 Sematech 传感器接入自己 MicroPython 项目的开发者。
+## 1. 快速接入
 
-如果你想了解整个仓库的三种使用方式，请先看：
-
-- [`README_NEW.md`]
-
-如果你已经确定要把本项目当作工具包集成进自己的工程，请继续阅读本文档。
-
-## 2. V3 的 SDK 思路
-
-V3 不是推翻旧接口，而是在原有 `communication` 静态接口的基础上，新增了更适合二次开发的 `SensorClient`。
-
-这样带来的结果是：
-
-- 老项目可以继续使用 `communication.xxx()`
-- 新项目可以使用 `SensorClient`
-- 客户可以自己决定使用哪个 UART
-- 客户可以把自己初始化好的 UART 对象直接传入 SDK
-
-## 3. 推荐接入方式
-
-### 方式 A：客户自己创建 UART 对象
-
-这是最推荐的方式，适合客户已经有自己的主程序和串口初始化逻辑。
+推荐方式是由客户自己的工程创建 `UART(...)`，然后传给 `SensorClient`。
 
 ```python
 from machine import UART, Pin
@@ -38,211 +17,548 @@ print(client.getInfo())
 print(client.getReading())
 ```
 
-### 方式 B：把串口参数直接交给 SDK
-
-适合快速接入和简单脚本。
+也可以直接传串口参数，让 SDK 内部创建 UART。
 
 ```python
 from esp32api import SensorClient
 
-client = SensorClient(port=2, baudrate=115200, tx=17, rx=16)
+client = SensorClient(port=2, tx=17, rx=16)
 
 print(client.getInfo())
 print(client.getReading())
 ```
 
-## 4. 初始化参数说明
+默认硬件约定：
 
-`SensorClient(...)` 支持以下参数：
+| 串口 | 传感器系列 | 默认波特率 |
+|------|------------|------------|
+| `UART(1)` | 4 系列 | `9600` |
+| `UART(2)` | 7 系列 | `115200` |
 
-| 参数 | 说明 | 示例 |
-|------|------|------|
-| `uart` | 外部已创建好的 UART 对象 | `UART(2, baudrate=115200, ...)` |
-| `port` | 串口号 | `1` / `2` |
-| `baudrate` | 波特率 | `9600` / `115200` |
-| `tx` | TX 引脚 | `17` 或 `Pin(17)` |
-| `rx` | RX 引脚 | `16` 或 `Pin(16)` |
-| `timeout` | 串口超时时间，单位毫秒 | `300` |
-| `addr_4` | 4 系列默认地址 | `0x01` |
-| `id_7` | 7 系列默认设备 ID | `0x10` |
+如果客户硬件不同，可以显式传入自己的 `baudrate`、`tx`、`rx` 或完整 `UART(...)` 对象。
 
-说明：
+## 2. 部署文件
 
-- 如果传入 `uart`，SDK 会直接复用这个对象
-- 如果没有传入 `uart`，则由 SDK 内部根据 `port / baudrate / tx / rx` 创建 UART
-- 如果只传入 `port`，SDK 会按默认硬件约定自动补齐波特率
+SDK 集成至少需要上传：
 
-当前项目默认硬件约定如下：
+```text
+esp32api/communication.py
+esp32api/client.py
+esp32api/__init__.py
+```
 
-- `UART(1)` 对应 `4系列`，默认波特率为 `9600`
-- `UART(2)` 对应 `7系列`，默认波特率为 `115200`
+如果需要参考示例，可同时保留：
 
-如果客户的硬件设计与此不同，可以继续自定义 `UART(...)` 参数后再传入 `SensorClient`。
+```text
+examples/
+```
 
-## 5. 主要接口
+## 3. 返回值约定
 
-`SensorClient` 当前主要提供以下接口：
+公开接口统一返回 `dict`，常见字段如下：
 
-- `getInfo()`
-- `getReading()`
-- `getSpanValue()`
-- `zeroCal()`
-- `spanCal(ppm)`
-- `getTemp()`
-- `getHumi()`
-- `set_uart(...)`
-- `set_address(...)`
-- `get_config()`
+| 字段 | 说明 |
+|------|------|
+| `ok` | 是否成功 |
+| `series` | 识别到的系列，常见为 `4` 或 `7` |
+| `raw` | 原始十六进制响应 |
+| `info` | 模块信息 |
+| `parsed` | 解析后的读数或说明 |
+| `value` | 数值类结果 |
+| `result` | 操作结果，如校零或标定结果 |
+| `request` | 标定类接口发出的请求帧 |
+| `response` | 标定类接口收到的响应帧 |
+| `note` | 失败或补充提示 |
+| `note2` | 附加说明 |
 
-## 6. 返回值格式
-
-核心接口统一返回 `dict`，常见字段包括：
-
-- `ok`
-- `series`
-- `raw`
-- `info`
-- `parsed`
-- `value`
-- `result`
-- `note`
-- `note2`
-
-建议客户代码先判断 `ok` 字段，再处理业务逻辑。
-
-示例：
+建议客户代码先判断 `ok`：
 
 ```python
 result = client.getReading()
 if result.get("ok"):
-    print("读取成功：", result)
+    print("读取成功:", result)
 else:
-    print("读取失败：", result)
+    print("读取失败:", result.get("note") or result)
 ```
 
-## 7. 接线建议
+## 4. 初始化接口
 
-典型接线如下：
+### `SensorClient(...)`
 
-| 传感器引脚 | ESP32 GPIO |
-|------------|------------|
-| VCC | 3.3V |
-| GND | GND |
-| TX | GPIO16（接开发板 RX） |
-| RX | GPIO17（接开发板 TX） |
+用途：创建传感器 SDK 客户端。
 
-注意：
+参数：
 
-- `TX` 和 `RX` 要交叉连接
-- 开发板与传感器必须共地
-- 如果传感器不是 3.3V 电平，请按硬件说明处理
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `uart` | 外部已创建好的 UART 对象 | `None` |
+| `port` | UART 串口号 | `None` |
+| `baudrate` | 波特率 | 根据 `port` 推导 |
+| `tx` | TX 引脚，支持整数或 `Pin(...)` | `None` |
+| `rx` | RX 引脚，支持整数或 `Pin(...)` | `None` |
+| `timeout` | 串口超时，单位毫秒 | `300` |
+| `addr_4` | 4 系列地址 | `0x01` |
+| `id_7` | 7 系列设备 ID | `0x10` |
 
-## 8. 兼容旧接口
+规则：
 
-为了兼容旧项目，原来的 `communication` 写法仍然保留：
+- 传入 `uart` 时，SDK 复用该对象
+- 未传 `uart` 时，必须至少传入 `port`
+- 只传 `port=1` 时，默认波特率为 `9600`
+- 只传 `port=2` 时，默认波特率为 `115200`
+- 显式传入 `baudrate` 时，SDK 保留用户值
+
+成功示例：
+
+```python
+client = SensorClient(port=2, tx=17, rx=16)
+print(client.get_config())
+```
+
+返回配置示例：
+
+```python
+{
+    "port": 2,
+    "baudrate": 115200,
+    "tx": 17,
+    "rx": 16,
+    "timeout": 300,
+    "addr_4": 1,
+    "id_7": 16
+}
+```
+
+失败注意事项：
+
+- 未传 `uart` 且未传 `port` 会抛出 `ValueError`
+- 串口号是否可用取决于开发板和 MicroPython 固件
+
+### `set_uart(...)`
+
+用途：运行时重新设置当前客户端使用的 UART。
+
+参数与 `SensorClient(...)` 中的 UART 参数一致。
+
+示例：
+
+```python
+client.set_uart(port=1, tx=17, rx=16)
+print(client.get_config())
+```
+
+注意事项：
+
+- 重新设置后，后续所有读取和标定都会使用新的 UART
+- 传入外部 `uart` 对象时，SDK 不会重新创建底层串口
+
+### `set_address(addr_4=None, id_7=None)`
+
+用途：设置 4 系列地址或 7 系列设备 ID。
+
+参数：
+
+| 参数 | 说明 |
+|------|------|
+| `addr_4` | 4 系列地址，范围由设备协议决定 |
+| `id_7` | 7 系列设备 ID，范围由设备协议决定 |
+
+示例：
+
+```python
+client.set_address(addr_4=0x01, id_7=0x10)
+```
+
+返回值：返回当前 `client`，便于链式调用。
+
+### `get_config()`
+
+用途：查看当前 SDK 客户端配置。
+
+示例：
+
+```python
+print(client.get_config())
+```
+
+返回字段：
+
+```python
+{
+    "port": 2,
+    "baudrate": 115200,
+    "tx": 17,
+    "rx": 16,
+    "timeout": 300,
+    "addr_4": 1,
+    "id_7": 16
+}
+```
+
+## 5. 读取接口
+
+### `getInfo()`
+
+用途：读取模块信息并识别气体类型。
+
+参数：无。
+
+成功示例：
+
+```python
+result = client.getInfo()
+print(result)
+```
+
+返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "raw": "3A 10 01 02 8D 68",
+    "info": "CO (code=2)"
+}
+```
+
+失败示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "info": ""
+}
+```
+
+注意事项：
+
+- 无返回通常表示接线、波特率、串口号或供电异常
+- 当前实现会先尝试 7 系列协议，再尝试 4 系列协议
+
+### `getReading()`
+
+用途：读取实时浓度数据。
+
+参数：无。
+
+成功示例：
+
+```python
+result = client.getReading()
+print(result)
+```
+
+4 系列返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 4,
+    "raw": "AA 01 01 00 00 08 00 3B CA EE",
+    "parsed": "2048 ppm"
+}
+```
+
+7 系列返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "raw": "3A 10 03 ...",
+    "parsed": "浓度值: 8 μg/m³, 浓度值: 7ppb, 温度值: 23.67°C, 湿度值: 55.34%RH"
+}
+```
+
+失败示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "parsed": ""
+}
+```
+
+### `getSpanValue()`
+
+用途：读取标气浓度或量程信息。
+
+参数：无。
+
+成功示例：
+
+```python
+result = client.getSpanValue()
+print(result)
+```
+
+4 系列返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 4,
+    "raw": "AA 01 01 00 00 08 00 3B CA EE",
+    "value": "2048 ppm"
+}
+```
+
+7 系列返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "raw": {
+        "μg/m³": "3A 10 03 ...",
+        "ppb": "3A 10 03 ..."
+    },
+    "value": {
+        "μg/m³": "6μg/m³",
+        "ppb": "6ppb"
+    }
+}
+```
+
+失败示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "value": None
+}
+```
+
+### `getTemp()`
+
+用途：读取温度，仅 7 系列支持。
+
+参数：无。
+
+成功示例：
+
+```python
+print(client.getTemp())
+```
+
+返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "raw": "3A 10 03 00 04 01 09 49 45 C4",
+    "value": "监测温度为:23.77°C"
+}
+```
+
+不支持或无返回示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "value": None
+}
+```
+
+### `getHumi()`
+
+用途：读取湿度，仅 7 系列支持。
+
+参数：无。
+
+成功示例：
+
+```python
+print(client.getHumi())
+```
+
+返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "raw": "3A 10 03 00 05 01 14 E3 CD 17",
+    "value": "监测湿度为:53.47%RH"
+}
+```
+
+不支持或无返回示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "value": None
+}
+```
+
+## 6. 校准接口
+
+### `zeroCal()`
+
+用途：执行零点标定。
+
+参数：无。
+
+示例：
+
+```python
+result = client.zeroCal()
+print(result)
+```
+
+成功示例：
+
+```python
+{
+    "ok": True,
+    "series": 4,
+    "raw": "AA 02 01 10 D0 5C EE",
+    "result": "模块校零成功"
+}
+```
+
+失败示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "raw": "",
+    "result": "无返回"
+}
+```
+
+风险说明：
+
+- 只能在洁净空气环境下执行
+- 执行后会改变传感器校准状态
+- 不建议在正常检测过程中自动执行
+
+### `spanCal(ppm)`
+
+用途：执行跨度标定，SDK 会根据输入浓度动态生成 CRC 帧。
+
+参数：
+
+| 参数 | 说明 |
+|------|------|
+| `ppm` | 标准气体浓度，范围会被限制到 `0~65535` |
+
+示例：
+
+```python
+result = client.spanCal(250)
+print(result)
+```
+
+返回示例：
+
+```python
+{
+    "ok": True,
+    "series": 7,
+    "request": {
+        "7": "3A 10 09 00 00 01 00 FA ...",
+        "4": "AA 05 01 00 FA ... EE"
+    },
+    "response": {
+        "7": "3A 10 09 00 ..."
+    },
+    "result": "标定结果:标定成功",
+    "note2": "span=250 ppm, id7=0x10, addr4=0x01"
+}
+```
+
+失败示例：
+
+```python
+{
+    "ok": False,
+    "series": None,
+    "request": {
+        "7": "...",
+        "4": "..."
+    },
+    "response": {},
+    "note": "无设备应答，请检查接线、电源和串口参数",
+    "note2": "span=250 ppm, id7=0x10, addr4=0x01"
+}
+```
+
+风险说明：
+
+- 只能在接入标准气体且读数稳定后执行
+- `ppm` 必须与标准气体标称浓度一致
+- 执行后会改变传感器校准状态
+- 不建议开放给未经培训的现场用户直接操作
+
+## 7. 旧接口兼容
+
+旧项目仍可继续使用 `communication`：
 
 ```python
 from esp32api.communication import communication
 
-communication.init_uart(port=2, baudrate=115200, tx=17, rx=16)
+communication.init_uart(port=2, tx=17, rx=16)
+
 print(communication.getInfo())
 print(communication.getReading())
 ```
 
-但是对于新项目，推荐优先使用：
+默认规则与 `SensorClient` 一致：
 
-```python
-from esp32api import SensorClient
-```
+- `communication.init_uart(port=1)` 使用 `9600`
+- `communication.init_uart(port=2)` 使用 `115200`
 
-## 9. 推荐的客户集成方式
+新项目建议优先使用 `SensorClient`。
 
-如果客户已经有自己的主程序，推荐按下面的思路集成：
+## 8. 常见问题
 
-1. 在客户自己的工程里初始化 UART
-2. 把 UART 对象传给 `SensorClient`
-3. 直接调用 `getInfo()`、`getReading()` 等接口
+### 没有任何返回
 
-这样做的好处是：
-
-- 客户可以完全控制自己项目里使用哪个 UART
-- 不需要修改我们底层协议实现
-- 更容易和客户自己的任务调度、配置系统和主程序整合
-
-## 10. 当前相关文件
-
-和 SDK 集成直接相关的文件有：
-
-- [`esp32api/communication.py`]
-- [`esp32api/client.py`]
-- [`esp32api/__init__.py`]
-- [`examples/sdk_with_uart_object.py`]
-- [`examples/sdk_with_params.py`]
-- [`examples/legacy_compat.py`]
-
-## 11. 常见问题
-
-### 1. 客户自己的工程里可以用 UART1、UART2 或其他串口吗
-
-可以。只要目标开发板和固件支持，客户就可以在自己的工程里这样写：
-
-```python
-uart = UART(1, baudrate=9600, tx=..., rx=...)
-```
-
-或者：
-
-```python
-uart = UART(2, baudrate=115200, tx=..., rx=...)
-```
-
-然后把这个 UART 传给 `SensorClient`。
-
-如果按当前项目默认接线，建议优先使用：
-
-- `UART(1) + 9600` 连接 `4系列`
-- `UART(2) + 115200` 连接 `7系列`
-
-### 2. 如果不知道模块是 4 系列还是 7 系列怎么办
-
-可以直接调用：
-
-```python
-print(client.getInfo())
-```
-
-项目会优先尝试识别 7 系列，再尝试 4 系列。
-
-### 3. 接上传感器没有返回怎么办
-
-建议按顺序检查：
+检查顺序：
 
 1. 传感器是否上电
-2. `TX` / `RX` 是否接反
-3. 波特率是否匹配
-4. 当前是否选对 UART
-5. 传感器是否确实使用 UART 协议
+2. `TX` 和 `RX` 是否交叉连接
+3. 开发板和传感器是否共地
+4. 波特率是否正确
+5. 当前 UART 口是否正确
+6. 传感器是否为 UART 协议
 
-## 12. 与工程模式和客户模式的关系
+### 客户能不能用其他 UART
 
-当前 [`esp32api/test.py`] 的菜单交互保持原样，但底层已经切换到 `SensorClient`。
+可以。客户可以自己创建任何目标板支持的 UART：
 
-当前 [`customer_mode_v2.py`] 的客户交互流程也保持原样，但底层同样已经切换到 `SensorClient`。
+```python
+uart = UART(1, baudrate=9600, tx=Pin(12), rx=Pin(13))
+client = SensorClient(uart=uart)
+```
 
-这意味着：
+只要该 UART 能正常 `write()` 和 `read()`，SDK 就可以复用。
 
-- 内部联调仍然方便
-- 客户模式和工程模式共用了同一套 SDK 底层
-- 同时也能覆盖 SDK 这条新路径
+### `UART(0)` 能不能用
 
-## 13. 总结
+取决于开发板。很多 ESP32 固件会把 `UART(0)` 用作 REPL 或下载调试口，不建议默认使用。
 
-V3 的核心目标不是替换掉旧接口，而是：
+### 可以在一个项目里接多个传感器吗
 
-- 让旧项目继续稳定运行
-- 让新项目更容易集成
-- 让客户能自己控制 UART 初始化方式
+可以创建多个 `SensorClient` 实例，每个实例绑定不同 UART。
 
-如果你需要项目全局说明，请看：
+```python
+sensor_4 = SensorClient(port=1, tx=17, rx=16)
+sensor_7 = SensorClient(port=2, tx=17, rx=16)
+```
 
-- [`README_NEW.md`]
+实际是否可行取决于开发板可用串口数量、引脚复用和供电能力。

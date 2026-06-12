@@ -1,473 +1,262 @@
-# 项目使用说明（MicroPython UART 传感器集成）
+# Semeatech Technology Sensors
 
-## 📌 项目简介
+这是一个基于 MicroPython 的 UART 气体传感器接入项目，用于在 ESP32 / ESP8266 上读取 Sematech 4 系列、7 系列传感器数据，并支持校零、跨度标定、温湿度读取等功能。
 
-本项目用于在 **MicroPython 支持的开发板** 上读取 UART 接口传感器的数据，并实现：
+当前对外版本为 **V3**。V3 的重点是把项目整理成三种清晰的使用方式：
 
-- 数据读取与解析（支持多种气体检测传感器）
-- 校零与标定指令发送
+- 客户模式：设备上电后自动进入中文交互流程
+- 工程模式：研发人员通过菜单脚本调试传感器
+- SDK 模式：客户开发者在自己的 MicroPython 项目中导入 `esp32api`
 
+详细 SDK 接口说明见 [SDK_GUIDE.md](./SDK_GUIDE.md)。
 
-适用于 **环境监测、气体检测、工业监控等嵌入式 IoT 场景**。
+## 项目能力
 
----
+- 通过 UART 与传感器通信
+- 自动识别 4 系列 / 7 系列传感器
+- 读取模块信息、实时浓度、标气浓度
+- 执行零点标定、跨度标定
+- 读取 7 系列温度、湿度数据
+- 支持客户自己创建 `UART(...)` 并注入 SDK
+- 保留旧版 `communication.xxx()` 调用方式
 
-## 🚀 快速开始（适用于零基础用户）
+## 默认硬件约定
 
-### ✅ 你需要准备
+当前项目默认约定如下：
 
-| 项目 | 推荐/说明 |
-|------|-----------|
-| 开发板 | ESP32 / ESP8266（支持 MicroPython） |
-| 传感器 | UART 通信的气体传感器模块Sensors |
-| 工具 | USB 数据线、电脑 |
-| 软件 | MicroPython 固件、[Thonny 编辑器](https://thonny.org/)（或 uPyCraft） |
+| 串口 | 传感器系列 | 默认波特率 |
+|------|------------|------------|
+| `UART(1)` | 4 系列 | `9600` |
+| `UART(2)` | 7 系列 | `115200` |
 
----
+如果客户硬件设计不同，可以在 SDK 中显式传入自己的 `UART(...)` 或 `port / baudrate / tx / rx` 参数。
 
-### 🛠️ 1. 安装 MicroPython 到开发板
+## 仓库结构
 
-### ✅ 一、准备工具和文件
+```text
+.
+├─ main.py                     # 客户模式自动启动入口
+├─ customer_mode_v2.py         # 客户模式 V2
+├─ CUSTOMER_MODE_V2.md         # 客户模式说明
+├─ SDK_GUIDE.md                # SDK 接口集成文档
+├─ examples/                   # SDK 示例
+│  ├─ sdk_with_uart_object.py
+│  ├─ sdk_with_params.py
+│  └─ legacy_compat.py
+├─ esp32api/
+│  ├─ communication.py         # 协议层与旧接口兼容层
+│  ├─ client.py                # V3 SDK 客户端 SensorClient
+│  ├─ test.py                  # 工程模式测试入口
+│  ├─ Main.py                  # 旧版主流程 / 扩展示例
+│  └─ __init__.py              # 包导出入口
+├─ boot.py
+└─ lib/
+   └─ ntptime.mpy
+```
 
-| 工具/文件          | 说明                                                                |
-| -------------- | ----------------------------------------------------------------- |
-| MicroPython 固件 | 从官方 [MicroPython 官网](https://micropython.org/download/) 下载对应板子的固件 |
-| Thonny IDE     | 推荐的图形化 IDE，支持一键烧录 MicroPython                                     |
-| USB 数据线        | 用于连接开发板到电脑                                                        |
-| 驱动程序           | 如果电脑无法识别开发板，请安装驱动（如 CP210x、CH340）                                 |
+## 三种使用方式
 
----
+### 客户模式
 
-### ✅ 二、下载并安装 Thonny 编辑器（推荐）
+适合交付给现场用户直接操作。
 
-1. 访问官网下载安装：
-   👉 [https://thonny.org](https://thonny.org)
+上传文件：
 
-2. 安装完成后，打开 Thonny。
+```text
+main.py
+customer_mode_v2.py
+esp32api/
+```
 
----
+运行方式：
 
-### ✅ 三、连接开发板并安装固件
+- ESP32 / ESP8266 上电后会自动执行根目录 `main.py`
+- `main.py` 会进入 `customer_mode_v2.py`
+- 程序会自动检测设备、保存配置并进入状态首页
 
-#### 👉 1. 连接开发板
+客户模式提供：
 
-* 用 USB 数据线将 ESP32 / ESP8266 开发板连接到电脑
-* 打开 Thonny，在状态栏底部看到类似 `MicroPython (no device selected)` 或者 `Python (PC)`。
+- 状态首页
+- 连续检测
+- 设备详情
+- 校零向导
+- 标定向导
+- 连接设置
 
-#### 👉 2. 安装 MicroPython 固件
+### 工程模式
 
-在 Thonny 中依次执行：
+适合研发、生产测试和协议联调。
 
-* 菜单栏点击：**工具** → **安装或更新 MicroPython 固件**
+上传文件：
 
-* 在弹出的窗口中选择：
+```text
+esp32api/communication.py
+esp32api/client.py
+esp32api/test.py
+esp32api/__init__.py
+```
 
-  | 选项            | 说明                                                         |
-  | ------------- | ---------------------------------------------------------- |
-  | **端口 (Port)** | 通常是 `COMx`（Windows）或 `/dev/ttyUSBx`（Linux/Mac），若不显示可点击「刷新」 |
-  | **板子类型**      | 选择 `ESP32` 或 `ESP8266`，根据你的开发板型号选择                         |
-  | **固件版本**      | 点击右侧「在线下载固件」，选择稳定版固件即可（也可以手动从官网下载 `.bin` 文件）               |
-
-* 点击【安装】开始烧录固件。整个过程大约 10\~30 秒。
-
-> 🔧 若遇到无法进入烧录状态的情况，可尝试按住开发板上的 `BOOT` 键，再点击「安装」。
-
----
-
-### ✅ 四、验证固件是否安装成功
-
-烧录完成后：
-
-* 底部状态栏应显示为：`MicroPython (ESP32) - COMx` 或类似字样。
-* 点击 Thonny 的 Shell（终端）窗口，输入：
+运行：
 
 ```python
-print("Hello MicroPython!")
+import esp32api.test
+esp32api.test.main()
 ```
 
-输出正常说明烧录成功 🎉
+或在 Thonny 中直接运行 `esp32api/test.py`。
 
----
+工程模式会让你手动输入 UART 参数，然后通过菜单执行：
 
-## 🔄 可选：使用 esptool 手动烧录（高级用户）
+- `getInfo()`
+- `getReading()`
+- `getSpanValue()`
+- `zeroCal()`
+- `spanCal(ppm)`
+- `getTemp()`
+- `getHumi()`
 
-如果你不使用 Thonny，也可以用 `esptool.py` 手动烧录：
+### SDK 模式
 
-```bash
-pip install esptool
-esptool.py --chip esp32 erase_flash
-esptool.py --chip esp32 --port COMx --baud 460800 write_flash -z 0x1000 esp32-xxxxxx.bin
+适合客户把本项目集成进自己的 MicroPython 工程。
+
+上传文件：
+
+```text
+esp32api/communication.py
+esp32api/client.py
+esp32api/__init__.py
 ```
 
-> 替换 `COMx` 为你电脑识别的串口号，`esp32-xxxxxx.bin` 为你的固件文件名。
+推荐写法：客户自己创建 UART 后传入 SDK。
 
----
+```python
+from machine import UART, Pin
+from esp32api import SensorClient
 
-### ✅ 安装成功后你可以继续：
+uart = UART(2, baudrate=115200, tx=Pin(17), rx=Pin(16))
+client = SensorClient(uart=uart)
 
-* 将本项目文件上传到开发板（`main.py`、各工具类）
-* 连接 UART 传感器，开始读取数据
-
----
-
-
-
-### ✍️ 2. 运行项目代码
-
-#### ✅ 下载项目代码
-
-你可以通过 Git 克隆项目或直接下载 `.zip` 文件解压。
-
-```bash
-git clone https://github.com/semeateh/Semeatech-Technology-Sensors.git
+print(client.getInfo())
+print(client.getReading())
 ```
 
-#### ✅ 连接开发板
+简单写法：直接把串口参数交给 SDK。
 
-- 打开 Thonny
-- 选择 MicroPython 设备（通常是 COMx 或 /dev/ttyUSBx）
-- 将以下文件上传到开发板：
+```python
+from esp32api import SensorClient
 
-```
-main.py
-Main.py
-communication.py
-test.py
+client = SensorClient(port=2, tx=17, rx=16)
+
+print(client.getInfo())
+print(client.getReading())
 ```
 
-> **提示**：在 Thonny 左侧「文件」区右键 -> 上传文件。
+如果只传 `port`，SDK 会按默认硬件约定自动补齐波特率：
 
-#### ✅ 开始运行
+- `port=1` 默认 `9600`
+- `port=2` 默认 `115200`
 
-将 UART 传感器的 TX、RX 正确连接到板子（例如 GPIO16 和 GPIO17），然后运行 `test.py`,输入相应指令。
+完整接口说明见 [SDK_GUIDE.md](./SDK_GUIDE.md)。
 
-    ================ UART 初始化 =================
-     请选择 UART 串口号 (1 或 2) [默认 2]: 2
-     请输入波特率 (推荐: 4系=9600, 7系=115200) [默认 115200]: 9600
-     请输入 TX 引脚编号（ESP32默认17） [默认 17]: 17
-     请输入 RX 引脚编号（ESP32默认16） [默认 16]: 16
-     ✅ UART 初始化完成: UART(2), 波特率=9600, TX=17, RX=16
-     
-    [1] 读取模块信息 (getInfo)
-    [2] 读取实时数据 (getReading)
-    [3] 读取标气浓度 (getSpanValue)
-    [4] 零点标定（聚合：7优先→4）
-    [5] 跨度标定（聚合：7优先→4）  ← 会询问 PPM
-    [T] 读取温度 (getTemp)   | 仅 7 系列
-    [H] 读取湿度 (getHumi)   | 仅 7 系列
-    [Q] 退出
-    
-   
-以4系列为例，你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
-```
-示例：输入 `1`
---- getInfo() ---
-OK?: True
-raw: AA 0F 01 0B 01 F4 00 64 00 32 00 19 02 8A E5 EE
-info: NH3 (code=11)
-```
-```
-示例：输入 `2`
---- getSpanValue() ---
-OK?: True
-raw: AA 01 01 00 00 08 00 3B CA EE
-value: 2048 ppm
-```
-```
-示例：输入 `3`
---- getSpanValue() ---
-OK?: True
-raw: AA 01 01 00 00 08 00 3B CA EE
-value: 2048 ppm
-```
-```
-示例：输入 `4`
---- zeroCal() 聚合 ---
-OK?: True
-raw: AA 02 01 10 D0 5C EE
-result: 模块校零成功
-```
-```
-示例：输入 `5`
-输入跨度标定浓度（PPM） [默认 250]:
-```
+## 接线说明
 
----
+典型 UART 接线如下：
 
-以7系列为例，你将在 Thonny 的「Shell」窗口看到解析后的数据输出：
-```
-示例：输入 `1`
---- getInfo() ---
-OK?: True
-raw: 3A 10 01 02 8D 68
-info: CO (code=2)
-```
-```
-示例：输入 `2`
---- getReading() ---
-OK?: True
-raw: 3A 10 03 00 00 06 00 00 00 08 00 00 00 07 09 3F 15 9E 77 6B
-parsed: 浓度值: 8 μg/m³, 浓度值: 7ppb, 温度值: 23.67°C, 湿度值: 55.34%RH
-```
-```
-示例：输入 `3`
---- getSpanValue() ---
-OK?: True
-raw: {'ppb': '3A 10 03 00 02 02 00 00 00 06 25 2D', 'μg/m³': '3A 10 03 00 00 02 00 00 00 06 24 CF'}
-value: {'ppb': '6ppb', 'μg/m³': '6μg/m³'}
-```
-```
-示例：输入 `4`
---- zeroCal() 聚合 ---
-OK?: True
-raw: 3A 10 07 00 00 01 00 E4 82 9D
-result: 零点标定返回数值:228
-```
-```
-示例：输入 `5`
-输入跨度标定浓度（PPM） [默认 250]:
-```
-```
-示例：输入 `T`
---- getTemp() ---
-OK?: True
-raw: 3A 10 03 00 04 01 09 49 45 C4
-value: 监测温度为:23.77°C
-```
-```
-示例：输入 `H`
---- getHumi() ---
-OK?: True
-raw: 3A 10 03 00 05 01 14 E3 CD 17
-value: 监测湿度为:53.47%RH
-```
+| 传感器引脚 | ESP32 GPIO |
+|------------|------------|
+| `VCC` | `3.3V` 或传感器要求的电源 |
+| `GND` | `GND` |
+| `TX` | `GPIO16`，接开发板 RX |
+| `RX` | `GPIO17`，接开发板 TX |
 
+注意：
 
----
+- `TX` 和 `RX` 要交叉连接
+- 开发板与传感器必须共地
+- 如果传感器是 5V TTL 电平，需要按硬件要求做电平转换
+- 如果传感器是 RS485，不可直接接 ESP32 UART，需要 RS485 转 TTL 模块
 
-### 🔌 3. 如何连接传感器（示例接线）
+## 主要接口
 
-| 传感器引脚 | ESP32 GPIO |                                                  
-|------------|-------------|                                                           
-| VCC        | 3.3V        |
-| GND        | GND         |
-| TX         | GPIO16 (RX2) |
-| RX         | GPIO17 (TX2) |
+| 接口 | 说明 |
+|------|------|
+| `getInfo()` | 读取模块信息并识别气体类型 |
+| `getReading()` | 读取实时浓度数据 |
+| `getSpanValue()` | 读取标气浓度 / 量程信息 |
+| `zeroCal()` | 零点标定 |
+| `spanCal(ppm)` | 跨度标定 |
+| `getTemp()` | 读取温度，仅 7 系列 |
+| `getHumi()` | 读取湿度，仅 7 系列 |
 
-请根据你的开发板引脚图和传感器说明书调整。
+详细参数、返回值和示例见 [SDK_GUIDE.md](./SDK_GUIDE.md)。
 
-例以 ESP32和7 SMART Sensor Module传感器模块图。
+## 旧接口兼容
 
-![screenshot-1746511969470](https://github.com/user-attachments/assets/3d6a5311-76e0-4742-bd4b-44c3a3e9c56b)            ![screenshot-1746511716478](https://github.com/user-attachments/assets/89b9d5f5-4bd8-4792-947c-ff1d2b53a3b2)
+旧项目仍可继续使用：
 
+```python
+from esp32api.communication import communication
 
----
+communication.init_uart(port=2, tx=17, rx=16)
 
-### 📦 4. 如何将本项目集成到你的项目中？
-```
-🧭 一、文件部署
-
-确保以下文件都已上传到开发板（或 Thonny 的设备端文件区）：
-
-communication.py
-
-
-⚙️ 二、初始化 UART 串口
-
-communication.py 默认使用 _UARTWrapper 类中的配置：
-
-# communication.py 中的默认配置
-_UARTWrapper(port=2, baudrate=9600, tx=17, rx=16)
-
-
-你可以直接在交互式终端中运行如下代码：
-
-from communication import communication
-
-# 修改 UART 串口参数（推荐交互输入）
-port = int(input("请选择 UART 串口号 (1 或 2) [默认 2]: ") or 2)
-baud = int(input("请输入波特率 (4系=9600, 7系=115200) [默认 9600]: ") or 9600)
-tx = int(input("请输入 TX 引脚编号 [默认 17]: ") or 17)
-rx = int(input("请输入 RX 引脚编号 [默认 16]: ") or 16)
-
-# 创建 UART 通讯对象
-communication._uart = communication._UARTWrapper(port=port, baudrate=baud, tx=tx, rx=rx)
-print(f"✅ UART 初始化完成: UART({port}), 波特率={baud}, TX={tx}, RX={rx}")
-
-
-运行后你会看到：
-
-✅ UART 初始化完成: UART(2), 波特率=9600, TX=17, RX=16
-
-🧩 三、设置模块地址或 ID
-
-可通过命令直接设置（不需改源码）：
-
-communication.addr_4 = 0x01   # 4系列默认地址
-communication.id_7 = 0x10     # 7系列默认设备ID
-
-
-或动态修改：
-
-communication.addr_4 = int(input("请输入4系列模块地址 (默认 1): ") or "1")
-communication.id_7 = int(input("请输入7系列模块ID (默认 16): ") or "16")
-
-🧪 四、功能调用示例
-
-下面每一步你都可以直接在 Thonny 的 Shell 中执行：
-
-1️⃣ 读取模块信息（自动识别系列）
 print(communication.getInfo())
-
-
-输出示例：
-
-{'ok': True, 'series': 7, 'raw': '3A 10 01 00 ...', 'info': 'O2 (code=3)'}
-
-2️⃣ 读取实时数据
 print(communication.getReading())
+```
 
+新项目建议优先使用：
 
-输出示例：
+```python
+from esp32api import SensorClient
+```
 
-{'ok': True, 'series': 4, 'raw': 'AA0101C1...', 'parsed': '102 ppm'}
+## 常见问题
 
-3️⃣ 读取标气浓度（span value）
-print(communication.getSpanValue())
+### 接上传感器没有返回
 
+建议依次检查：
 
-返回内容：
+1. 传感器是否上电
+2. `TX` 和 `RX` 是否接反
+3. 开发板与传感器是否共地
+4. 波特率是否匹配
+5. 是否选对 UART 口
+6. 传感器是否确实是 UART 协议
 
-{'ok': True, 'series': 7, 'value': {'μg/m³': '145 μg/m³', 'ppb': '78 ppb'}}
+### 如何判断 4 系列还是 7 系列
 
-4️⃣ 零点标定
-print(communication.zeroCal())
+调用：
 
+```python
+print(client.getInfo())
+```
 
-返回：
+默认硬件约定是：
 
-{'ok': True, 'series': 4, 'result': '模块校零成功'}
+- 4 系列使用 `UART(1) + 9600`
+- 7 系列使用 `UART(2) + 115200`
 
-5️⃣ 跨度标定（任意浓度自动计算 CRC）
-print(communication.spanCal(250))
+### 校零和标定可以随便执行吗
 
+不建议。`zeroCal()` 和 `spanCal(ppm)` 会改变传感器校准状态：
 
-返回：
+- `zeroCal()` 应在洁净空气环境下执行
+- `spanCal(ppm)` 应在标准气体环境下执行
+- 现场不满足条件时不要执行标定类操作
 
-{
-  'ok': True,
-  'series': 7,
-  'request': {'7': '3A 10 09 00 00 01 00 FA 32 3F', '4': 'AA 05 01 00 FA A1 4B EE'},
-  'response': {'7': '3A 10 09 00 00 32 3F'},
-  'result': '标定成功',
-  'note2': 'span=250 ppm, id7=0x10, addr4=0x01'
-}
+## 开发状态
 
-6️⃣ 读取温湿度（仅 7 系列）
-print(communication.getTemp())
-print(communication.getHumi())
+当前代码层面已完成：
 
+- SDK 入口 `SensorClient`
+- 客户模式和工程模式底层统一到 `SensorClient`
+- 默认串口 / 系列 / 波特率规则统一
+- 示例和文档统一到 V3 口径
 
-输出：
+正式对外交付前，仍建议做一次真实硬件联调：
 
-{'ok': True, 'series': 7, 'value': '监测温度为:23.45°C'}
-{'ok': True, 'series': 7, 'value': '监测湿度为:45.88%RH'}
+- 4 系列：`UART(1) + 9600`
+- 7 系列：`UART(2) + 115200`
 
-💡 五、示例脚本（可保存为 test_uart.py）
-from communication import communication
+## License
 
-# 1️⃣ 初始化 UART
-port = int(input("UART 串口号 (1/2) [默认 2]: ") or 2)
-baud = int(input("波特率 [默认 9600]: ") or 9600)
-tx = int(input("TX 引脚 [默认 17]: ") or 17)
-rx = int(input("RX 引脚 [默认 16]: ") or 16)
-communication._uart = communication._UARTWrapper(port=port, baudrate=baud, tx=tx, rx=rx)
-print(f"✅ UART 初始化完成: UART({port}), baud={baud}, TX={tx}, RX={rx}")
-
-# 2️⃣ 设定模块地址
-communication.addr_4 = int(input("请输入4系列地址(默认1): ") or "1")
-communication.id_7 = int(input("请输入7系列ID(默认16): ") or "16")
-
-# 3️⃣ 读取模块信息
-print(communication.getInfo())
-
-# 4️⃣ 获取实时数据
-print(communication.getReading())
-
-# 5️⃣ 跨度标定
-span = int(input("输入跨度标定浓度（ppm）: ") or "250")
-print(communication.spanCal(span))
-
-🧾 六、预期测试结果
-操作	预期输出示例
-初始化 UART	✅ UART 初始化完成
-读取信息	返回系列号与气体类型
-读取数据	返回浓度与单位
-零点标定	“模块校零成功” 或 “标定成功”
-跨度标定	“标定成功” 且显示动态 CRC 帧内容
-读取温湿度	返回数值 °C 与 %RH
-✅ 七、测试结论
-
-本测试流程能验证：
-
-串口通讯是否畅通；
-
-模块是否识别（4系 / 7系 自动检测）；
-
-校零、跨度标定、CRC 动态计算是否生效；
-
-温湿度数据可选验证。
----
-
----
-
-## 📘 项目结构说明
----
-### 1. `Main` 类
-核心逻辑所在，包括：
-- UART 初始化
-- 循环读取传感器数据
-- 数据解析与打印
-- 心跳机制
-
----
-
-### 2. `communication` 类
-- 解析传感器返回的 hex 数据
-- 映射气体类型
-- 返回浓度值、单位、状态等信息
-
----
-
-## 📖 常见问题解答
-
-### 1. **如何知道我的传感器型号？**
-请查阅传感器手册，确认是否为 UART 通信，并获取通信协议文档。
-
-### 2. **为什么接了传感器没反应？**
-- 检查接线是否正确（TX <-> RX）
-- 检查波特率是否匹配（默认 9600 或 115200）
-- 使用 `uart.any()` 检查是否有数据返回
-
-### 3. **UART 数据不完整怎么办？**
-建议在 `uart.read()` 前加入 `utime.sleep(0.1)` 短暂等待，确保数据完整接收。
-
-### 4. **如何将数据发送到服务器？**
-你可以在读取数据后使用 MQTT、HTTP 等方式上传。
-
----
-
-## 🧩 后续扩展建议
-
-- 增加 Web 配置页面（如配置 WiFi 和 MQTT）
-- 支持多传感器并发读取
-- 将数据储存到本地（如 SD 卡）
-
----
-
-## 📄 许可证
-
-本项目使用 MIT 许可证，详情请见 [LICENSE](./LICENSE)。
-
----
-
+本项目使用 MIT License，详见 [LICENSE](./LICENSE)。
