@@ -6,5 +6,6 @@ from esp32api import SensorClient
 # 这种方式更适合快速接入和简单脚本。
 client = SensorClient(port=2, baudrate=115200, tx=17, rx=16)
 
+print(client.get_config())
 print(client.getInfo())
 print(client.getReading())

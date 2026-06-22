@@ -10,7 +10,13 @@
 from machine import UART, Pin
 from esp32api import SensorClient
 
-uart = UART(2, baudrate=115200, tx=Pin(17), rx=Pin(16))
+uart = UART(
+    2,
+    baudrate=115200,
+    tx=Pin(17),
+    rx=Pin(16),
+    timeout=300,
+)
 client = SensorClient(uart=uart)
 
 print(client.getInfo())
@@ -43,6 +49,7 @@ SDK 集成至少需要上传：
 
 ```text
 esp32api/communication.py
+esp32api/_sdk_compat.py
 esp32api/client.py
 esp32api/__init__.py
 ```
@@ -103,6 +110,8 @@ else:
 规则：
 
 - 传入 `uart` 时，SDK 复用该对象
+- 只传入 `uart` 时，不要求同时提供 `port`
+- SDK 不读取或猜测外部 UART 对象的初始化参数
 - 未传 `uart` 时，必须至少传入 `port`
 - 只传 `port=1` 时，默认波特率为 `9600`
 - 只传 `port=2` 时，默认波特率为 `115200`
@@ -151,6 +160,7 @@ print(client.get_config())
 
 - 重新设置后，后续所有读取和标定都会使用新的 UART
 - 传入外部 `uart` 对象时，SDK 不会重新创建底层串口
+- 外部 UART 模式下，`port / baudrate / tx / rx` 仅作为客户提供的描述信息保存，不会用于重新配置 UART
 
 ### `set_address(addr_4=None, id_7=None)`
 
@@ -194,6 +204,50 @@ print(client.get_config())
     "id_7": 16
 }
 ```
+
+当客户端只传入外部 UART 对象时，SDK 无法可靠读取不同
+MicroPython 固件中 UART 对象的初始化参数，因此未知字段返回
+`None`：
+
+```python
+uart = UART(
+    2,
+    baudrate=115200,
+    tx=Pin(17),
+    rx=Pin(16),
+    timeout=300,
+)
+client = SensorClient(uart=uart)
+
+print(client.get_config())
+```
+
+```python
+{
+    "port": None,
+    "baudrate": None,
+    "tx": None,
+    "rx": None,
+    "timeout": 300,
+    "addr_4": 1,
+    "id_7": 16
+}
+```
+
+如果客户希望 `get_config()` 同时记录串口描述，可以显式提供：
+
+```python
+client = SensorClient(
+    uart=uart,
+    port=2,
+    baudrate=115200,
+    tx=17,
+    rx=16,
+)
+```
+
+这些参数仅用于配置展示。SDK 不会使用它们重新初始化外部 UART，
+也不会验证它们是否与 UART 对象的实际配置一致。
 
 ## 5. 读取接口
 
@@ -524,6 +578,13 @@ print(communication.getReading())
 
 新项目建议优先使用 `SensorClient`。
 
+导入 `SensorClient` 时，SDK 不会加载旧接口或提前创建 UART。旧接口
+请继续使用完整导入路径：
+
+```python
+from esp32api.communication import communication
+```
+
 ## 8. 常见问题
 
 ### 没有任何返回
@@ -562,3 +623,15 @@ sensor_7 = SensorClient(port=2, tx=17, rx=16)
 ```
 
 实际是否可行取决于开发板可用串口数量、引脚复用和供电能力。
+
+## 9. SDK 定位与已知限制
+
+当前 V3 SDK 的目标是对原有接口进行实例化封装和整合，方便客户
+开发人员在自己的项目中创建多个客户端、注入 UART 并调用统一接口。
+本版本不重新实现底层通信协议，也不改变原有命令、解析方式和返回
+字段语义。
+
+根据 4 系列 V1.3 和 7 系列 V1.7 规格书核对发现，原有底层实现与
+规格书在部分数据解析、标定流程及接口语义上存在差异。这些差异不
+属于本次 SDK 封装修复范围，后续如需调整，应作为独立的协议层版本
+进行设计、硬件验证和兼容性评估。

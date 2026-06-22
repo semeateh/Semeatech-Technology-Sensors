@@ -8,7 +8,7 @@
 """
 
 try:
-    from esp32api.communication import (
+    from esp32api._sdk_compat import (
         _UARTWrapper,
         FlagCode,
         substring_data_4,
@@ -19,7 +19,7 @@ try:
         bytes_to_hex,
     )
 except ImportError:
-    from communication import (
+    from _sdk_compat import (
         _UARTWrapper,
         FlagCode,
         substring_data_4,
@@ -77,7 +77,34 @@ class SensorClient:
         - 如果传入 uart，则直接使用客户已有的 UART 对象
         - 如果未传 uart，则要求至少提供 port，由库内部创建 UART
         """
+        if uart is not None:
+            resolved_timeout = 300 if timeout is None else timeout
+
+            # 如果传入的对象已经具备 send_hex_and_read 方法，
+            # 说明它已经是适配好的串口对象，可以直接复用。
+            if hasattr(uart, "send_hex_and_read"):
+                self._uart = uart
+            else:
+                # 如果传入的是原始 UART 对象，则再包一层 _UARTWrapper，
+                # 统一成 SDK 内部使用的串口访问接口。
+                self._uart = _UARTWrapper(
+                    uart=uart,
+                    timeout=resolved_timeout,
+                )
+
+            # 外部 UART 的实际配置由客户负责。这里仅保存客户显式提供的
+            # 描述信息，不推断属性，也不使用这些参数重新配置 UART。
+            self.port = port
+            self.baudrate = baudrate
+            self.tx = tx
+            self.rx = rx
+            self.timeout = resolved_timeout
+            return self
+
         resolved_port = self.port if port is None else port
+        if resolved_port is None:
+            raise ValueError("未传入 uart 时，必须至少提供 port 参数")
+
         resolved_baudrate = self.baudrate if baudrate is None else baudrate
         resolved_tx = self.tx if tx is None else tx
         resolved_rx = self.rx if rx is None else rx
@@ -88,32 +115,13 @@ class SensorClient:
         if resolved_timeout is None:
             resolved_timeout = 300
 
-        if uart is not None:
-            # 如果传入的对象已经具备 send_hex_and_read 方法，
-            # 说明它已经是适配好的串口对象，可以直接复用。
-            if hasattr(uart, "send_hex_and_read"):
-                self._uart = uart
-            else:
-                # 如果传入的是原始 UART 对象，则再包一层 _UARTWrapper，
-                # 统一成 SDK 内部使用的串口访问接口。
-                self._uart = _UARTWrapper(
-                    uart=uart,
-                    port=resolved_port if resolved_port is not None else 2,
-                    baudrate=resolved_baudrate,
-                    tx=resolved_tx,
-                    rx=resolved_rx,
-                    timeout=resolved_timeout,
-                )
-        else:
-            if resolved_port is None:
-                raise ValueError("未传入 uart 时，必须至少提供 port 参数")
-            self._uart = _UARTWrapper(
-                port=resolved_port,
-                baudrate=resolved_baudrate,
-                tx=resolved_tx,
-                rx=resolved_rx,
-                timeout=resolved_timeout,
-            )
+        self._uart = _UARTWrapper(
+            port=resolved_port,
+            baudrate=resolved_baudrate,
+            tx=resolved_tx,
+            rx=resolved_rx,
+            timeout=resolved_timeout,
+        )
 
         self.port = resolved_port
         self.baudrate = resolved_baudrate
